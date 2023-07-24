@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "khdl",
+  "khdl_examples"
+]
