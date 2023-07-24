@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-  "khdl",
-  "khdl_examples"
+  "irony",
+  "irony_example"
 ]
