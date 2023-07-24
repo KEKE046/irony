@@ -7,19 +7,19 @@ pub struct Value<'ctx> {
 }
 
 #[derive(Clone,Copy)]
-pub struct ValueRef<'op, 'ctx>(&'op Value<'ctx>);
-impl<'op, 'ctx> ValueRef<'op, 'ctx> {
+pub struct ValueRef<'ctx>(&'ctx Value<'ctx>);
+impl<'ctx> ValueRef<'ctx> {
   fn new(value: &'op Value<'ctx>) -> Self {Self(value)}
 }
-impl<'op, 'ctx> PartialEq for ValueRef<'op, 'ctx> {
+impl<'ctx> PartialEq for ValueRef<'ctx> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.0, other.0) }
 }
-impl<'op, 'ctx> Eq for ValueRef<'op, 'ctx> {}
-impl<'op, 'ctx> Deref for ValueRef<'op, 'ctx> {
+impl<'ctx> Eq for ValueRef<'ctx> {}
+impl<'ctx> Deref for ValueRef<'ctx> {
   type Target = Value<'ctx>;
   fn deref(&self) -> &Self::Target {&self.0}
 }
-impl<'op, 'ctx> Hash for ValueRef<'op, 'ctx> {
+impl<'ctx> Hash for ValueRef<'ctx> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
     std::ptr::hash(self.0, state)
   }
