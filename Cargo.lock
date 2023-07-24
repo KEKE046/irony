@@ -3,15 +3,15 @@
 version = 3
 
 [[package]]
+name = "irony_examples"
+version = "0.1.0"
+
+[[package]]
 name = "khdl"
 version = "0.1.0"
 dependencies = [
  "typed-arena",
 ]
-
-[[package]]
-name = "khdl_examples"
-version = "0.1.0"
 
 [[package]]
 name = "typed-arena"

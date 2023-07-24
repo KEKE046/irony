@@ -9,7 +9,7 @@ pub struct Value<'ctx> {
 #[derive(Clone,Copy)]
 pub struct ValueRef<'ctx>(&'ctx Value<'ctx>);
 impl<'ctx> ValueRef<'ctx> {
-  fn new(value: &'op Value<'ctx>) -> Self {Self(value)}
+  fn new(value: &'ctx Value<'ctx>) -> Self {Self(value)}
 }
 impl<'ctx> PartialEq for ValueRef<'ctx> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.0, other.0) }

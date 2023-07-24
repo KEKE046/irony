@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "khdl"
+name = "irony"
 version = "0.1.0"

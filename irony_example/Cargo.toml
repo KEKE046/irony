@@ -1,5 +1,5 @@
 [package]
-name = "khdl_examples"
+name = "irony_examples"
 version = "0.1.0"
 edition = "2021"
 
