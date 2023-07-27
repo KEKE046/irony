@@ -1,8 +1,11 @@
-#![feature(return_position_impl_trait_in_trait)]
+#![allow(incomplete_features)]
 #![allow(unused)]
+#![feature(return_position_impl_trait_in_trait)]
+#![feature(inherent_associated_types)]
 
 mod fr;
 mod utils;
+mod experimental;
 
 // pub fn add(left: usize, right: usize) -> usize {
 //     left + right

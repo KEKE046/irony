@@ -1,5 +1,5 @@
 [package]
-name = "khdl"
+name = "irony"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 typed-arena = "2.0.2"
+bumpalo = "3.13.0"
+rustc-hash = "1.1.0"
+indexmap = "2.0.0"
+hashlink = "0.8.3"
+dashmap = "5.5.0"
