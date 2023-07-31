@@ -104,15 +104,13 @@ impl<D, A> SameTypeOperandConstraint<D, A> {
 
 
 #[macro_export]
-macro_rules! constraint_enum {
-    ($name:ident : ($data_type: ty, $attribute: ty) = $($variant:ident($variant_ty:ty)),*) => {
-        $constraint_enum! {
-            [data_type = $data_type, attr = $attribute]
-            $name = $($variant:ident($variant_ty:ty)),*
+macro_rules! constraint_def {
+    (
+        [data_type = $dtype:ty, attr = $attr:ty] 
+        $name:ident = {
+            $($variant:ident($variant_ty:ident$($block:block)?),)*
         }
-    };
-
-    ([data_type = $dtype:ty, attr = $attr:ty] $name:ident = $($variant:ident($variant_ty:ty)),*) => {
+    ) => {
         #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
             $($variant($variant_ty)),*
@@ -144,6 +142,33 @@ macro_rules! constraint_enum {
                 $name::$variant(self)
             }
         }
+        )*
+
+        $(
+            $(
+                #[derive(Default, Clone, Debug, PartialEq)]
+                pub struct $variant_ty;
+                impl irony::ConstraintTrait for $variant_ty {
+                    type DataTypeT = $dtype;
+                
+                    type AttributeT = $attr;
+                
+                    fn verify<'env, E, EntityT: irony::Entity>(
+                        &self,
+                        env: &'env E,
+                        values: Vec<(String, Vec<Self::AttributeT>)>,
+                        uses: Vec<(String, Vec<irony::EntityId>)>,
+                        defs: Vec<(String, Vec<irony::EntityId>)>,
+                        regions: Vec<(String, Vec<irony::RegionId>)>,
+                    ) -> bool
+                    where
+                        E: irony::Environ<EntityT = EntityT>,
+                        EntityT: irony::Entity<DataTypeT = Self::DataTypeT> {
+                            $block
+                    }
+                }
+            )?
+
         )*
     };
 

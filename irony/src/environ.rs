@@ -100,7 +100,6 @@ macro_rules! environ_def {
             }
         
             fn get_uses(&self, entity: irony::EntityId) -> Vec<irony::OpId> {
-                println!("try to run get_uses() for entity {:?}\n", entity);
                 let mut v = Vec::new();
                 for (id, op) in self.op_table.get_map() {
                     if op.uses(irony::EntityId::from(entity.to_owned())) {
