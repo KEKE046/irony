@@ -1,9 +1,9 @@
 
 use std::marker::PhantomData;
 
-use crate::EntityId;
+use crate::{EntityId, RegionId};
 
-use super::common::{Id, AttributeTrait};
+use super::common::AttributeTrait;
 use super::entity::Entity;
 use super::environ::Environ;
 
@@ -15,10 +15,8 @@ pub trait ConstraintTrait {
         env: &'env E,
         values: Vec<(String, Vec<Self::AttributeT>)>,
         uses: Vec<(String, Vec<EntityId>)>,
-        defs: Vec<(String, Vec<EntityId>)>
-        // values: &[&Self::AttributeT],
-        // uses: &[&UseId],
-        // defs: &[&DefId],
+        defs: Vec<(String, Vec<EntityId>)>,
+        regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -26,7 +24,7 @@ pub trait ConstraintTrait {
 }
 
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive( PartialEq, Clone, Copy, Debug)]
 pub struct SameTypeConstraint<D, A> {
     _marker: PhantomData<(D, A)>
 }
@@ -39,10 +37,8 @@ impl<D: PartialEq, A: AttributeTrait<D>> ConstraintTrait for SameTypeConstraint<
         env: &'env E,
         values: Vec<(String, Vec<Self::AttributeT>)>,
         uses: Vec<(String, Vec<EntityId>)>,
-        defs: Vec<(String, Vec<EntityId>)>
-        // values: &[&Self::AttributeT],
-        // uses: &[&UseId],
-        // defs: &[&DefId],
+        defs: Vec<(String, Vec<EntityId>)>,
+        _regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -69,6 +65,44 @@ impl<D, A> SameTypeConstraint<D, A> {
     }
 }
 
+#[derive( PartialEq, Clone, Copy, Debug)]
+pub struct SameTypeOperandConstraint<D, A> {
+    _marker: PhantomData<(D, A)>
+}
+
+impl<D: PartialEq, A: AttributeTrait<D>> ConstraintTrait for SameTypeOperandConstraint<D, A>{
+    type DataTypeT = D;
+    type AttributeT = A;
+    fn verify<'env, E, EntityT: Entity>(
+        &self,
+        env: &'env E,
+        _values: Vec<(String, Vec<Self::AttributeT>)>,
+        uses: Vec<(String, Vec<EntityId>)>,
+        _defs: Vec<(String, Vec<EntityId>)>,
+        _regions: Vec<(String, Vec<RegionId>)>,
+    ) -> bool
+    where
+        E: Environ<EntityT = EntityT>,
+        EntityT: Entity<DataTypeT = Self::DataTypeT>
+    {
+        let mut uses_tys = uses.into_iter().map(|pair| pair.1).flat_map(|v| v.iter().map(|x| env.get_entity(x.to_owned()).get_dtype()).collect::<Vec<_>>());
+
+
+        if let Some(first) = uses_tys.next() {
+            uses_tys.all(|item| item == first)
+        } else {
+            true
+        }
+    }
+}
+
+impl<D, A> SameTypeOperandConstraint<D, A> {
+    pub fn new() -> Self {
+        Self { _marker: PhantomData }
+    }
+}
+
+
 #[macro_export]
 macro_rules! constraint_enum {
     ($name:ident : ($data_type: ty, $attribute: ty) = $($variant:ident($variant_ty:ty)),*) => {
@@ -79,7 +113,7 @@ macro_rules! constraint_enum {
     };
 
     ([data_type = $dtype:ty, attr = $attr:ty] $name:ident = $($variant:ident($variant_ty:ty)),*) => {
-        #[derive(Clone, Copy, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
             $($variant($variant_ty)),*
         }
@@ -92,16 +126,14 @@ macro_rules! constraint_enum {
                 env: &'env E,
                 values: Vec<(String, Vec<Self::AttributeT>)>,
                 uses: Vec<(String, Vec<irony::EntityId>)>,
-                defs: Vec<(String, Vec<irony::EntityId>)>
-                // values: &[&Self::AttributeT],
-                // uses: &[&UseId],
-                // defs: &[&DefId],
+                defs: Vec<(String, Vec<irony::EntityId>)>,
+                regions: Vec<(String, Vec<irony::RegionId>)>,
             ) -> bool
             where
                 E: irony::Environ<EntityT = EntityT>,
                 EntityT: irony::Entity<DataTypeT = Self::DataTypeT> {
                     match self {
-                        $($name::$variant(inner) => inner.verify(env, values, uses, defs)),*
+                        $($name::$variant(inner) => inner.verify(env, values, uses, defs, regions)),*
                     }
                 }
         }

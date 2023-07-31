@@ -1,8 +1,7 @@
 use crate::RegionId;
 
 use super::common::Id;
-use super::entity::{Entity, EntityId};
-use super::environ::Environ;
+use super::entity::EntityId;
 
 pub trait Op: Id {
     type AttributeT;
@@ -48,9 +47,9 @@ macro_rules! op_def {
         $name_enum:ident = {
             $(
                 $name_op:ident: {
-                    defs: [$($def:ident),*],
+                    defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
                     uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
-                    attrs: [$($attr:ident),*],
+                    attrs: [$($attr:ident : $attr_variant:ident($attr_inner_ty:ty)),*],
                     constraints: [$($constraint:expr),*],
                     regions: [$($region:ident),*],
                 },
@@ -62,9 +61,9 @@ macro_rules! op_def {
             irony::op_def_one! {
                 [attr = $attr_ty, constraint = $constraint_ty]
                 $name_op : {
-                    defs : [$($def),*],
+                    defs : [$($def),*$(;$($variadic_def),+)?],
                     uses : [$($use),*$(;$($variadic_use),+)?],
-                    attrs : [$($attr),*],
+                    attrs : [$($attr : $attr_variant($attr_inner_ty)),*],
                     constraints : [$($constraint),*],
                     regions: [$($region),*],
                 }
@@ -84,9 +83,9 @@ macro_rules! op_def_one {
     (
         [attr = $attr_ty:ty, constraint = $constraint_ty:ty]
         $name:ident : {
-            defs: [$($def:ident),*],
+            defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
             uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
-            attrs: [$($attr:ident),*],
+            attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],
             constraints: [$($constraint:expr),*],
             regions: [$($region:ident),*],
         }
@@ -95,9 +94,10 @@ macro_rules! op_def_one {
         pub struct $name  {
             id: usize,
             $($def: irony::EntityId,)*
+            $($($variadic_def: Vec<irony::EntityId>,)*)?
             $($use: irony::EntityId,)*
             $($($variadic_use: Vec<irony::EntityId>,)*)?
-            $($attr: $attr_ty,)*
+            $($attr: $attr_inner_ty,)*
             $($region: irony::RegionId,)*
             constraints: Vec<$constraint_ty>,
             parent: Option<irony::RegionId>,
@@ -120,6 +120,7 @@ macro_rules! op_def_one {
             fn get_defs(&self) -> Vec<(String, Vec<irony::EntityId>)> {
                 vec![
                     $((format!("{}", stringify!($def)), vec![self.$def])),*
+                    $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned()))*)?
                 ]
             }
 
@@ -133,7 +134,7 @@ macro_rules! op_def_one {
 
             fn get_attrs(&self) -> Vec<(String, Vec<Self::AttributeT>)> {
                 vec![
-                    $((format!("{}", stringify!($attr)), vec![self.$attr])),*
+                    $((format!("{}", stringify!($attr)), vec![self.$attr.to_owned().into()])),*
                 ]
             }
 
@@ -172,15 +173,17 @@ macro_rules! op_def_one {
         impl $name {
             pub fn new(
                 $($def: irony::EntityId,)*
+                $($($variadic_def: Vec<irony::EntityId>,)*)?
                 $($use: irony::EntityId,)*
                 $($($variadic_use: Vec<irony::EntityId>,)*)?
-                $($attr: $attr_ty,)*
+                $($attr: $attr_inner_ty,)*
                 $($region: irony::RegionId,)*
             ) -> Self {
 
                 Self {
                     id: 0,
                     $($def,)*
+                    $($($variadic_def,)*)?
                     $($use,)*
                     $($($variadic_use,)*)?
                     $($attr,)*

@@ -1,23 +1,19 @@
-#![allow(unused)]
+mod common;
+mod constraint;
+mod entity;
+mod environ;
+mod operation;
+mod hash;
 
+pub mod utils;
 
-/// experimental mod includes an example for the expanded target
-/// TODO: turn into circt binding
-mod experimental;
+pub use common::*;
+pub use constraint::*;
+pub use entity::*;
+pub use environ::*;
+pub use operation::*;
+pub use hash::*;
 
-
-/// ## Infra
-/// traits and structs for IR construction
-/// 
-/// - [x] Entity
-/// - [x] Operation
-/// - [x] Constraint
-/// - [ ] Environ
-/// - [ ] Parse & Print
-/// - [ ] ...
-
-mod infra;
-
-
-pub use infra::*;
-pub use irony_macros::*;
+pub mod preclude {
+    pub use super::{Id, Op, Entity, Environ, utils};
+}

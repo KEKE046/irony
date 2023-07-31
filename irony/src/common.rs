@@ -19,7 +19,7 @@ impl Id for usize {
     fn id(&self) -> usize {
         *self
     }
-    fn set_id(&mut self, id: usize) {
+    fn set_id(&mut self, _id: usize) {
         panic!("cannot set id to usize")
     }
 }
@@ -30,23 +30,23 @@ pub trait AttributeTrait<DT> {
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ConstValueI32<D:Copy> {
+pub struct ConstValueI32<D:Clone> {
     pub value: i32,
     pub dtype: D,
 }
 
-impl<D: Copy> AttributeTrait<D> for ConstValueI32<D> {
+impl<D:Clone> AttributeTrait<D> for ConstValueI32<D> {
     fn dtype(&self) -> D {
-        self.dtype
+        self.dtype.to_owned()
     }
 }
 
 #[macro_export]
 macro_rules! data_type_enum {
-    ($enum_name:ident = $($variant:ident($($inner:ident),*)),*) => {
-        #[derive(Clone, Copy, Debug, PartialEq)]
+    ($enum_name:ident = $($variant:ident$(($($inner:ident),*))?),*) => {
+        #[derive(Clone, Debug, PartialEq)]
         pub enum $enum_name {
-            $($variant($($inner),*)),*
+            $($variant$(($($inner),*))?),*
         }
     };
 }
@@ -61,7 +61,7 @@ macro_rules! attribute_enum {
     };
 
     ([data_type = $dtype: ty] $name:ident = $($variant:ident($variant_ty:ty)),*) => {
-        #[derive(Clone, Copy, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
             $($variant($variant_ty)),*
         }
@@ -76,7 +76,7 @@ macro_rules! attribute_enum {
         $(
             impl Into<$name> for $variant_ty {
                 fn into(self) -> $name {
-                    $name::$variant(self)
+                    $name::$variant(self.to_owned())
                 }
             }
         )*

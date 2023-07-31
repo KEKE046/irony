@@ -1,23 +1,18 @@
 use irony::{self, preclude::*};
 
-irony::data_type_enum![DataTypeEnum = UInt(usize)];
+/// define types and attributes
+mod common;
+mod constraints;
+pub use common::*;
+pub use constraints::*;
 
-irony::attribute_enum! {
-    [data_type = DataTypeEnum]
-    AttributeEnum = ConstValue(irony::ConstValueI32<DataTypeEnum>)
-}
-
-type SameType = irony::SameTypeConstraint<DataTypeEnum, AttributeEnum>;
-irony::constraint_enum! {
-    [data_type = DataTypeEnum, attr = AttributeEnum]
-    ConstraintEnum = SameType(SameType)
-}
+mod utils;
 
 irony::entity_def! {
     [data_type = DataTypeEnum]
 
     EntityEnum = {
-        Wire: (has_data=true),
+        Wire: (store_data=true),
         Module
     }
 }
@@ -26,13 +21,8 @@ irony::op_def! {
     [attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
-        Constant:  {
-            defs: [lhs],
-            uses: [],
-            attrs: [rhs],
-            constraints: [SameType::new().into()],
-            regions: [],
-        },
+        // ------ BEGIN: define the operations in `hw` dialect -------
+
         Assign: {
             defs: [lhs],
             uses: [rhs],
@@ -40,16 +30,130 @@ irony::op_def! {
             constraints: [SameType::new().into()],
             regions: [],
         },
+
         ModuleDef: {
             defs: [lhs],
             uses: [],
+            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
+            constraints: [ModuleConstraint::default().into()],
+            regions: [body],
+        },
+
+        Instance: {
+            defs: [; outputs],
+            uses: [; inputs],
+            attrs: [target_id: StringAttr(StringAttr), instance_name: StringAttr(StringAttr)],
+            constraints: [InstanceConstraint::default().into()],
+            regions: [], 
+        },
+
+        Input: {
+            defs: [; inputs],
+            uses: [],
+            attrs: [name: StringAttr(StringAttr), dtype: TypeAttr(TypeAttr)],
+            constraints: [],
+            regions: [],
+        },
+
+        Output: {
+            defs: [],
+            uses: [; outputs],
+            attrs: [name: StringAttr(StringAttr), dtype: TypeAttr(TypeAttr)],
+            constraints:[],
+            regions: [],
+        },
+
+        BitCast: {
+            defs: [lhs],
+            uses: [rhs],
             attrs: [],
             constraints: [],
-            regions: [region],
+            regions: [],
         },
+
+        Constant: {
+            defs: [lhs],
+            uses: [],
+            attrs: [value: ConstAttr(ConstAttr)],
+            constraints: [SameType::new().into()],
+            regions: [],
+        },
+
+        AggregateConstant: {
+            defs: [lhs],
+            uses: [],
+            attrs: [values: ArrayAttr(ArrayAttr)],
+            constraints: [SameTypeAggregate::default().into()],
+            regions: [],
+        },
+
+        ArrayConcat: {
+            defs: [lhs],
+            uses: [; operands],
+            attrs: [],
+            constraints: [ArrayConcatConstraint::default().into()],
+            regions: [],
+        },
+
+        ArrayCreate: {
+            defs: [lhs],
+            uses: [; operands],
+            attrs: [],
+            constraints: [ArrayCreateConstraint::default().into(), SameTypeOperands::new().into()],
+            regions: [],
+        },
+
+        ArrayGet: {
+            defs: [lhs],
+            uses: [array, index],
+            attrs: [],
+            constraints: [ArrayGetConstraint::default().into()],
+            regions: [],
+        },
+
+        ArraySlice: {
+            defs: [lhs],
+            uses: [array, index],
+            attrs: [],
+            constraints: [ArraySliceConstraint::default().into()],
+            regions: [],
+        },
+
+        StructCreate: {
+            defs: [lhs],
+            uses: [; operands],
+            attrs: [],
+            constraints: [StructCreateConstraint::default().into()],
+            regions: [],
+        },
+
+        StructExtract: {
+            defs: [lhs],
+            uses: [struct_input, field],
+            attrs: [],
+            constraints: [StructExtractConstraint::default().into()],
+            regions: [],
+        },
+
+        StructInject: {
+            defs: [lhs],
+            uses: [struct_input, field, new_value],
+            attrs: [],
+            constraints: [StructInjectConstraint::default().into()],
+            regions: [],
+        },
+
+        StructExplode: {
+            defs: [; outputs],
+            uses: [struct_input],
+            attrs: [],
+            constraints: [StructExplodeConstraint::default().into()],
+            regions: [],
+        },
+
+        // ------ END: define the operations in `hw` dialect -------
     }
 }
-
 
 irony::environ_def! {
     [entity = EntityEnum, op = OpEnum, attr = AttributeEnum, constraint = ConstraintEnum]

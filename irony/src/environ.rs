@@ -1,11 +1,9 @@
 use crate::{Region, RegionId};
 
-use super::common::Id;
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
 use super::operation::{Op, OpId};
 
-use crate as irony;
 
 pub trait Environ {
     type OpT: Op;

@@ -1,8 +1,7 @@
-use std::marker::PhantomData;
 
 use super::common::Id;
 use super::environ::Environ;
-use super::operation::{Op, OpId};
+use super::operation::OpId;
 
 pub trait Entity: Id {
     type DataTypeT;
@@ -98,9 +97,9 @@ impl Region {
 
 #[macro_export]
 macro_rules! entity_def {
-    ([data_type = $data_type:ty] $name_enum:ident = {$($name:ident $(: (has_data=$expr:ident))?),+}) => {
+    ([data_type = $data_type:ty] $name_enum:ident = {$($name:ident $(: (store_data=$expr:ident))?),+}) => {
         $(irony::entity_def_one! {
-            $name : ($(has_data = $expr,)? data_type = $data_type)
+            $name : ($(store_data = $expr,)? data_type = $data_type)
         })*
 
         irony::entity_enum! {
@@ -114,11 +113,11 @@ macro_rules! entity_def {
 macro_rules! entity_def_one {
     ($name:ident : (data_type = $data_type:ty)) => {
         irony::entity_def_one! {
-            $name : (has_data = false, data_type = $data_type)
+            $name : (store_data = false, data_type = $data_type)
         }
     };
 
-    ($name:ident : (has_data = true, data_type = $data_type:ty)) => {
+    ($name:ident : (store_data = true, data_type = $data_type:ty)) => {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name {
             pub id: usize,
@@ -139,7 +138,7 @@ macro_rules! entity_def_one {
             }
 
             fn get_dtype(&self) -> Option<Self::DataTypeT> {
-                self.dtype
+                self.dtype.to_owned()
             }
 
             fn as_id(&self) -> irony::EntityId {
@@ -176,7 +175,7 @@ macro_rules! entity_def_one {
         }
     };
 
-    ($name:ident : (has_data = false, data_type = $data_type:ty)) => {
+    ($name:ident : (store_data = false, data_type = $data_type:ty)) => {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name {
             pub id: usize,
@@ -197,7 +196,7 @@ macro_rules! entity_def_one {
             }
 
             fn get_dtype(&self) -> Option<Self::DataTypeT> {
-                self.dtype
+                self.dtype.to_owned()
             }
 
             fn as_id(&self) -> irony::EntityId {
