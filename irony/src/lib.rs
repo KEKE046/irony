@@ -1,23 +1,23 @@
-#![allow(incomplete_features)]
 #![allow(unused)]
-#![feature(return_position_impl_trait_in_trait)]
-#![feature(inherent_associated_types)]
 
-mod fr;
-mod utils;
+
+/// experimental mod includes an example for the expanded target
+/// TODO: turn into circt binding
 mod experimental;
 
-// pub fn add(left: usize, right: usize) -> usize {
-//     left + right
-// }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+/// ## Infra
+/// traits and structs for IR construction
+/// 
+/// - [x] Entity
+/// - [x] Operation
+/// - [x] Constraint
+/// - [ ] Environ
+/// - [ ] Parse & Print
+/// - [ ] ...
 
-//     #[test]
-//     fn it_works() {
-//         let result = add(2, 2);
-//         assert_eq!(result, 4);
-//     }
-// }
+mod infra;
+
+
+pub use infra::*;
+pub use irony_macros::*;

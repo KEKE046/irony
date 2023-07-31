@@ -3,6 +3,7 @@ mod tests {
     use crate::experimental::hash::FxIndexMap;
     use core::panic;
     use std::fmt::Debug;
+    use std::marker::PhantomData;
     use std::num::ParseIntError;
     use std::ops::{Deref, DerefMut};
 
@@ -17,11 +18,34 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Copy, Debug, PartialEq)]
-    pub struct ConstVal {
-        value: i32,
-        dtyp: DataTypeEnum,
+    pub trait ConstantTrait<D> {
+        fn dtype(&self) -> D;
     }
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct ConstVal<D> {
+        value: i32,
+        dtyp: D,
+    }
+
+    impl<D: Copy> ConstantTrait<D> for ConstVal<D> {
+        fn dtype(&self) -> D {
+            self.dtyp
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum AttributeEnum {
+        ConstVal(ConstVal<DataTypeEnum>)
+    }
+
+    impl ConstantTrait<DataTypeEnum> for AttributeEnum {
+        fn dtype(&self) -> DataTypeEnum {
+            match self {
+                AttributeEnum::ConstVal(const_val) => const_val.dtype(),
+            }
+        }
+    }
+
 
     // pub struct DataType;
     #[derive(Clone, Copy, Debug, PartialEq)]
@@ -49,7 +73,7 @@ mod tests {
         fn verify<'env, E, UseId: Id, DefId: Id, EntityT: Entity>(
             &self,
             env: &'env E,
-            values: &[&ConstVal],
+            values: &[&Self::ConstantT],
             uses: &[&UseId],
             defs: &[&DefId],
         ) -> bool
@@ -59,15 +83,17 @@ mod tests {
     }
 
     #[derive(PartialEq, Clone, Copy, Debug)]
-    pub struct SameTypeConstraint;
+    pub struct SameTypeConstraint<ConstantT, DataTypeT> {
+        _marker: PhantomData<(ConstantT, DataTypeT)>,
+    }
 
-    impl ConstraintTrait for SameTypeConstraint {
-        type ConstantT = ConstVal;
-        type DataTypeT = DataTypeEnum;
+    impl<C: ConstantTrait<D>, D: PartialEq> ConstraintTrait for SameTypeConstraint<C, D> {
+        type ConstantT = C;
+        type DataTypeT = D;
         fn verify<'env, E, UseId: Id, DefId: Id, EntityT: Entity>(
             &self,
             env: &E,
-            values: &[&ConstVal],
+            values: &[&Self::ConstantT],
             uses: &[&UseId],
             defs: &[&DefId],
         ) -> bool
@@ -78,7 +104,7 @@ mod tests {
             // <<EntityT as Entity<DataTypeT = DataTypeEnum>>, {
             let mut dtype_collect = values
                 .iter()
-                .map(|val| Some(val.dtyp))
+                .map(|val| Some(val.dtype()))
                 .chain(
                     env.get_entities(uses)
                         .into_iter()
@@ -98,25 +124,27 @@ mod tests {
         }
     }
 
-    impl SameTypeConstraint {
+    impl<C, D> SameTypeConstraint<C, D> {
         pub fn into_enum() -> ConstraintEnum {
-            ConstraintEnum::SameType(SameTypeConstraint)
+            ConstraintEnum::SameType(SameTypeConstraint {
+                _marker: PhantomData,
+            })
         }
     }
 
     #[derive(PartialEq, Clone, Copy, Debug)]
     pub enum ConstraintEnum {
-        SameType(SameTypeConstraint),
+        SameType(SameTypeConstraint<ConstVal<DataTypeEnum>, DataTypeEnum>),
     }
 
     impl ConstraintTrait for ConstraintEnum {
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
         type DataTypeT = DataTypeEnum;
 
         fn verify<'env, E, UseId: Id, DefId: Id, EntityT: Entity>(
             &self,
             env: &'env E,
-            values: &[&ConstVal],
+            values: &[&Self::ConstantT],
             uses: &[&UseId],
             defs: &[&DefId],
         ) -> bool
@@ -130,7 +158,7 @@ mod tests {
         }
     }
 
-    pub struct Refered<'rfd, T: ?Sized + Id>(&'rfd T);
+    // pub struct Refered<'rfd, T: ?Sized + Id>(&'rfd T);
 
     pub trait Environ {
         type OpT: Op; //  = OpEnum;
@@ -138,55 +166,46 @@ mod tests {
         type ConstraintT: ConstraintTrait;
         type ConstantT;
 
-        fn get_def<'a, 't: 'a, ID: Id>(&'t self, id: &'a ID) -> Option<&'a Self::OpT>;
-        fn get_uses<'a, 't: 'a, ID: Id>(&'t self, id: &'a ID) -> Vec<&'a Self::OpT>;
+        fn get_def<ID: Id>(&self, id: &ID) -> Option<OpId>;
+        fn get_uses<ID: Id>(&self, id: &ID) -> Vec<OpId>;
+        fn get_entitiy<ID: Id>(&self, id: &ID) -> &Self::EntityT;
         fn get_entities<ID: Id>(&self, ids: &[&ID]) -> Vec<&Self::EntityT>;
         fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
+        fn get_region<ID: Id>(&mut self, id:&ID) -> &Region;
+        fn add_region(&mut self, region: Region) -> RegionId;
         fn add_op(&mut self, op: Self::OpT) -> OpId;
         fn set_entity_parent<ID: Id>(&mut self, id: &ID);
         fn set_op_parent<ID: Id>(&mut self, id: &ID);
 
-        fn with_region<F: for<'a> Fn(&mut Self) -> () >(&mut self, parent:EntityId, f: F);
+        fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F);
     }
 
     pub trait Op: Id {
-        type EntityT;
-        type OpT;
-        type ConstraintT;
         type ConstantT;
+        type ConstraintT;
 
-        fn get_defs<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT>;
-        fn get_uses<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT>;
+        fn get_defs<E: Environ>(&self, env: &E) -> Vec<EntityId>;
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<EntityId>;
+
         fn get_values(&self) -> Vec<&Self::ConstantT>;
 
         fn uses<ID: Id>(&self, entity: &ID) -> bool;
         fn defs<ID: Id>(&self, entity: &ID) -> bool;
 
-        fn verify<
-            'env,
-            E: Environ<
-                EntityT = Self::EntityT,
-                ConstraintT = Self::ConstraintT,
-                ConstantT = Self::ConstantT,
-            >,
-        >(
-            &self,
-            env: &'env E,
-        ) -> bool;
+        fn get_verifiers(&self) -> Vec<Self::ConstraintT>;
 
-        fn into_enum(self) -> Self::OpT;
-
-        fn get_parent(&self) -> Option<EntityId>;
-        fn set_parent(&mut self, parent: EntityId);
+        fn get_parent(&self) -> Option<RegionId>;
+        fn set_parent(&mut self, parent: RegionId);
     }
     #[derive(Clone, Copy, PartialEq, Debug)]
     pub struct OpId(usize);
+
+    impl From<usize> for OpId {
+        fn from(value: usize) -> Self {
+            Self(value)
+        }
+    }
+
     impl Id for OpId {
         fn id(&self) -> usize {
             self.0
@@ -197,26 +216,32 @@ mod tests {
     }
 
     pub trait Entity: Id {
-        type EnumT;
-        type OpEnumT;
+        // type EnumT;
+        // type OpEnumT;
         type DataTypeT;
         fn get_dtype(&self) -> Option<Self::DataTypeT>;
-        fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
-        where
-            E: Environ<OpT = Self::OpEnumT>;
-        fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::OpEnumT>;
-        fn into_enum(self) -> Self::EnumT;
-        fn as_enum(&self) -> Self::EnumT;
+        // fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
+        // where
+        //     E: Environ<OpT = Self::OpEnumT>;
+        // fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
+        //     &'t self,
+        //     env: &'env E,
+        // ) -> Vec<&'t Self::OpEnumT>;
+
+        fn get_def<E: Environ>(&self, env: &E) -> Option<OpId>;
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
         fn as_id(&self) -> EntityId;
-        fn get_parent(&self) -> Option<EntityId>;
-        fn set_parent(&mut self, parent: EntityId);
+        fn get_parent(&self) -> Option<RegionId>;
+        fn set_parent(&mut self, parent: RegionId);
     }
 
     #[derive(Clone, Copy, PartialEq, Debug, Default)]
     pub struct EntityId(usize);
+    impl From<usize> for EntityId {
+        fn from(value: usize) -> Self {
+            Self(value)
+        }
+    }
     impl Id for EntityId {
         fn id(&self) -> usize {
             self.0
@@ -242,59 +267,48 @@ mod tests {
         }
     }
 
-    impl Entity for Region {
-        type EnumT = EntityEnum;
-
-        type OpEnumT = OpEnum;
-
-        type DataTypeT = DataTypeEnum;
-
-        fn get_dtype(&self) -> Option<Self::DataTypeT> {
-            None
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct RegionId(usize);
+    impl Id for RegionId {
+        fn id(&self) -> usize {
+            self.0
         }
 
-        fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
-        where
-            E: Environ<OpT = Self::OpEnumT>,
-        {
-            None
-        }
-
-        fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::OpEnumT> {
-            env.get_uses(self)
-        }
-
-        fn into_enum(self) -> Self::EnumT {
-            Self::EnumT::Region(self)
-        }
-
-        fn as_enum(&self) -> Self::EnumT {
-            todo!()
-        }
-
-        fn as_id(&self) -> EntityId {
-            EntityId(self.id)
-        }
-
-        // Region does not have parent. It should be used be operation to represent hierarchy
-        fn get_parent(&self) -> Option<EntityId> {
-            None
-        }
-
-        fn set_parent(&mut self, parent: EntityId) {
-            panic!("Region cannot have parent")
+        fn set_id(&mut self, id: usize) {
+            self.0 = id
         }
     }
 
     impl Region {
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId> {
+            env.get_uses(self)
+        }
+
+        fn as_id(&self) -> RegionId {
+            RegionId(self.id)
+        }
+
         pub fn new() -> Self {
             Self {
                 id: 0,
                 op_children: vec![],
                 entity_children: vec![],
+            }
+        }
+
+        pub fn add_op_child(&mut self, op: OpId) {
+            if let Some(_) = self.op_children.iter().find(|&op_exist| op_exist.id() == op.id()) {
+                panic!("{} has already been in the op_children of {}", op.id(), self.id())
+            } else {
+                self.op_children.push(op)
+            }
+        }
+
+        pub fn add_entity_child(&mut self, entity: EntityId) {
+            if let Some(_) = self.entity_children.iter().find(|&entity_exist| entity_exist.id() == entity.id()) {
+                panic!("{} has already been in the entity_children of {}", entity.id(), self.id())
+            } else {
+                self.entity_children.push(entity)
             }
         }
     }
@@ -304,7 +318,7 @@ mod tests {
         id: usize,
         sym: Symbol,
         dtype: DataTypeEnum,
-        parent: Option<EntityId>,
+        parent: Option<RegionId>,
     }
 
     impl Id for Wire {
@@ -317,30 +331,14 @@ mod tests {
     }
 
     impl Entity for Wire {
-        type EnumT = EntityEnum;
-        type OpEnumT = OpEnum;
         type DataTypeT = DataTypeEnum;
 
-        fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
-        where
-            E: Environ<OpT = Self::OpEnumT>,
-        {
+        fn get_def<E: Environ>(&self, env: &E) -> Option<OpId> {
             env.get_def(self)
         }
 
-        fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::OpEnumT> {
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId> {
             env.get_uses(self)
-        }
-
-        fn into_enum(self) -> Self::EnumT {
-            Self::EnumT::Wire(self)
-        }
-
-        fn as_enum(&self) -> Self::EnumT {
-            Self::EnumT::Wire(self.to_owned())
         }
 
         fn get_dtype(&self) -> Option<Self::DataTypeT> {
@@ -351,11 +349,11 @@ mod tests {
             EntityId(self.id)
         }
 
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             self.parent
         }
 
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             self.parent = Some(parent)
         }
     }
@@ -399,29 +397,14 @@ mod tests {
     }
 
     impl Entity for Module {
-        type EnumT = EntityEnum;
-        type OpEnumT = OpEnum;
         type DataTypeT = DataTypeEnum;
 
-        fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
-        where
-            E: Environ<OpT = Self::OpEnumT>,
-        {
+        fn get_def<E: Environ>(&self, env: &E) -> Option<OpId> {
             env.get_def(self)
         }
-        fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::OpEnumT> {
+
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId> {
             env.get_uses(self)
-        }
-
-        fn into_enum(self) -> Self::EnumT {
-            Self::EnumT::Module(self)
-        }
-
-        fn as_enum(&self) -> Self::EnumT {
-            Self::EnumT::Module(self.to_owned())
         }
 
         fn get_dtype(&self) -> Option<Self::DataTypeT> {
@@ -432,11 +415,11 @@ mod tests {
             EntityId(self.id)
         }
 
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             None
         }
 
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             panic!("Module cannot have parent")
         }
     }
@@ -445,7 +428,18 @@ mod tests {
     pub enum EntityEnum {
         Wire(Wire),
         Module(Module),
-        Region(Region),
+    }
+
+    impl Into<EntityEnum> for Wire {
+        fn into(self) -> EntityEnum {
+            EntityEnum::Wire(self)
+        }
+    }
+
+    impl Into<EntityEnum> for Module {
+        fn into(self) -> EntityEnum {
+            EntityEnum::Module(self)
+        }
     }
 
     impl Id for EntityEnum {
@@ -453,68 +447,37 @@ mod tests {
             match self {
                 EntityEnum::Wire(wire) => wire.id(),
                 EntityEnum::Module(module) => module.id(),
-                EntityEnum::Region(region) => region.id(),
             }
         }
         fn set_id(&mut self, id: usize) {
             match self {
                 EntityEnum::Wire(wire) => wire.set_id(id),
                 EntityEnum::Module(module) => module.set_id(id),
-                EntityEnum::Region(region) => region.set_id(id),
             }
         }
     }
 
     impl Entity for EntityEnum {
-        type EnumT = EntityEnum;
-
-        type OpEnumT = OpEnum;
-
         type DataTypeT = DataTypeEnum;
 
         fn get_dtype(&self) -> Option<Self::DataTypeT> {
             match self {
                 EntityEnum::Wire(wire) => wire.get_dtype(),
                 EntityEnum::Module(module) => module.get_dtype(),
-                EntityEnum::Region(region) => region.get_dtype(),
             }
         }
 
-        fn get_def<'env: 't, 't, E>(&'t self, env: &'env E) -> Option<&'t Self::OpEnumT>
-        where
-            E: Environ<OpT = Self::OpEnumT>,
-        {
+        fn get_def<E: Environ>(&self, env: &E) -> Option<OpId> {
             match self {
                 EntityEnum::Wire(wire) => wire.get_def(env),
                 EntityEnum::Module(module) => module.get_def(env),
-                EntityEnum::Region(region) => region.get_def(env),
             }
         }
 
-        fn get_uses<'env: 't, 't, E: Environ<OpT = Self::OpEnumT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::OpEnumT> {
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId> {
             match self {
                 EntityEnum::Wire(wire) => wire.get_uses(env),
                 EntityEnum::Module(module) => module.get_uses(env),
-                EntityEnum::Region(region) => region.get_uses(env),
-            }
-        }
-
-        fn into_enum(self) -> Self::EnumT {
-            match self {
-                EntityEnum::Wire(wire) => wire.into_enum(),
-                EntityEnum::Module(module) => module.into_enum(),
-                EntityEnum::Region(region) => region.into_enum(),
-            }
-        }
-
-        fn as_enum(&self) -> Self::EnumT {
-            match self {
-                EntityEnum::Wire(wire) => wire.as_enum(),
-                EntityEnum::Module(module) => module.as_enum(),
-                EntityEnum::Region(region) => region.as_enum(),
             }
         }
 
@@ -522,23 +485,20 @@ mod tests {
             match self {
                 EntityEnum::Wire(wire) => wire.as_id(),
                 EntityEnum::Module(module) => module.as_id(),
-                EntityEnum::Region(region) => region.as_id(),
             }
         }
 
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             match self {
                 EntityEnum::Wire(wire) => wire.get_parent(),
                 EntityEnum::Module(module) => module.get_parent(),
-                EntityEnum::Region(region) => region.get_parent(),
             }
         }
 
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             match self {
                 EntityEnum::Wire(wire) => wire.set_parent(parent),
                 EntityEnum::Module(module) => module.set_parent(parent),
-                EntityEnum::Region(region) => region.set_parent(parent),
             }
         }
     }
@@ -549,7 +509,7 @@ mod tests {
         lhs: EntityId,
         rhs: EntityId,
         verifiers: Vec<ConstraintEnum>,
-        parent: Option<EntityId>,
+        parent: Option<RegionId>,
     }
 
     impl Id for Assign {
@@ -563,23 +523,15 @@ mod tests {
     }
 
     impl Op for Assign {
-        type EntityT = EntityEnum;
-        type OpT = OpEnum;
         type ConstraintT = ConstraintEnum;
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
 
-        fn get_defs<'env: 't, 't, E>(&'t self, env: &'env E) -> Vec<&'t Self::EntityT>
-        where
-            E: Environ<EntityT = Self::EntityT>,
-        {
-            env.get_entities(&[&self.lhs])
+        fn get_defs<E: Environ>(&self, env: &E) -> Vec<EntityId> {
+            vec![self.lhs]
         }
 
-        fn get_uses<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
-            env.get_entities(&[&self.rhs])
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<EntityId> {
+            vec![self.rhs]
         }
 
         fn get_values(&self) -> Vec<&Self::ConstantT> {
@@ -593,59 +545,40 @@ mod tests {
             self.lhs.id() == entity.id()
         }
 
-        fn verify<
-            'env,
-            E: Environ<
-                EntityT = Self::EntityT,
-                ConstraintT = Self::ConstraintT,
-                ConstantT = Self::ConstantT,
-            >,
-        >(
-            &self,
-            env: &'env E,
-        ) -> bool {
-            self.verifiers
-                .iter()
-                .map(|verifier| {
-                    verifier.verify(
-                        env,
-                        self.get_values().as_slice(),
-                        self.get_uses(env).as_slice(),
-                        self.get_defs(env).as_slice(),
-                    )
-                })
-                .fold(true, |acc, x| acc && x)
+        fn get_verifiers(&self) -> Vec<Self::ConstraintT> {
+            self.verifiers.to_owned()
         }
 
-        fn into_enum(self) -> Self::OpT {
-            Self::OpT::Assign(self)
-        }
-
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             self.parent
         }
 
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             self.parent = Some(parent)
         }
     }
 
-
     impl Assign {
-        pub fn new(lhs: EntityId, rhs:EntityId) -> Self {
-            Self { id: 0, lhs, rhs, verifiers: vec![SameTypeConstraint::into_enum()], parent:None }
+        pub fn new(lhs: EntityId, rhs: EntityId) -> Self {
+            Self {
+                id: 0,
+                lhs,
+                rhs,
+                verifiers: vec![
+                    SameTypeConstraint::<ConstVal<DataTypeEnum>, DataTypeEnum>::into_enum(),
+                ],
+                parent: None,
+            }
         }
-        
     }
-
 
     #[derive(PartialEq, Debug)]
     pub struct Constant {
         id: usize,
         lhs: EntityId,
-        rhs: ConstVal,
+        rhs: ConstVal<DataTypeEnum>,
         verifiers: Vec<ConstraintEnum>,
-        parent: Option<EntityId>,
+        parent: Option<RegionId>,
     }
 
     impl Id for Constant {
@@ -659,23 +592,15 @@ mod tests {
     }
 
     impl Op for Constant {
-        type EntityT = EntityEnum;
-        type OpT = OpEnum;
-
         type ConstraintT = ConstraintEnum;
 
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
 
-        fn get_defs<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
-            env.get_entities(&[&self.lhs])
+        fn get_defs<E: Environ>(&self, env: &E) -> Vec<EntityId> {
+            vec![self.lhs]
         }
-        fn get_uses<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
+
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<EntityId> {
             vec![]
         }
 
@@ -690,51 +615,28 @@ mod tests {
             self.lhs.id() == entity.id()
         }
 
-        fn verify<
-            'env,
-            E: Environ<
-                EntityT = Self::EntityT,
-                ConstraintT = Self::ConstraintT,
-                ConstantT = Self::ConstantT,
-            >,
-        >(
-            &self,
-            env: &'env E,
-        ) -> bool {
-            self.verifiers
-                .iter()
-                .map(|verifier| {
-                    verifier.verify(
-                        env,
-                        self.get_values().as_slice(),
-                        self.get_uses(env).as_slice(),
-                        self.get_defs(env).as_slice(),
-                    )
-                })
-                .fold(true, |acc, x| acc && x)
+        fn get_verifiers(&self) -> Vec<Self::ConstraintT> {
+            self.verifiers.to_owned()
         }
 
-        fn into_enum(self) -> Self::OpT {
-            Self::OpT::Constant(self)
-        }
-
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             self.parent
         }
 
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             self.parent = Some(parent)
         }
     }
 
-
     impl Constant {
-        pub fn new(lhs: EntityId, rhs: ConstVal) -> Self{
+        pub fn new(lhs: EntityId, rhs: ConstVal<DataTypeEnum>) -> Self {
             Self {
                 id: 0,
                 lhs,
                 rhs,
-                verifiers: vec![SameTypeConstraint::into_enum()],
+                verifiers: vec![
+                    SameTypeConstraint::<ConstVal<DataTypeEnum>, DataTypeEnum>::into_enum(),
+                ],
                 parent: None,
             }
         }
@@ -744,7 +646,11 @@ mod tests {
     pub struct ModuleDef {
         id: usize,
         lhs: EntityId,
-        region: EntityId,
+        region: RegionId,
+        // inputs: EntityId,
+        // outputs: EntityId,
+        // input_attributes:
+        // ouptut_attributes:
         verifiers: Vec<ConstraintEnum>,
         parent: Option<EntityId>,
     }
@@ -760,24 +666,15 @@ mod tests {
     }
 
     impl Op for ModuleDef {
-        type EntityT = EntityEnum;
-        type OpT = OpEnum;
-
         type ConstraintT = ConstraintEnum;
 
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
 
-        fn get_defs<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
-            env.get_entities(&[&self.lhs])
+        fn get_defs<E: Environ>(&self, env: &E) -> Vec<EntityId> {
+            vec![self.lhs]
         }
 
-        fn get_uses<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<EntityId> {
             vec![]
         }
 
@@ -793,33 +690,20 @@ mod tests {
             self.lhs.id() == entity.id()
         }
 
-        fn verify<
-            'env,
-            E: Environ<
-                EntityT = Self::EntityT,
-                ConstraintT = Self::ConstraintT,
-                ConstantT = Self::ConstantT,
-            >,
-        >(
-            &self,
-            env: &'env E,
-        ) -> bool {
-            true
+        fn get_verifiers(&self) -> Vec<Self::ConstraintT> {
+            vec![]
         }
 
-        fn into_enum(self) -> Self::OpT {
-            Self::OpT::ModuleDef(self)
-        }
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             None
         }
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             panic!("ModuleDef cannot have parent")
         }
     }
 
     impl ModuleDef {
-        pub fn new(lhs: EntityId, region: EntityId) -> Self {
+        pub fn new(lhs: EntityId, region: RegionId) -> Self {
             Self {
                 id: 0,
                 lhs,
@@ -837,17 +721,30 @@ mod tests {
         ModuleDef(ModuleDef),
     }
 
+    impl Into<OpEnum> for Assign {
+        fn into(self) -> OpEnum {
+            OpEnum::Assign(self)
+        }
+    }
+
+    impl Into<OpEnum> for Constant {
+        fn into(self) -> OpEnum {
+            OpEnum::Constant(self)
+        }
+    }
+
+    impl Into<OpEnum> for ModuleDef {
+        fn into(self) -> OpEnum {
+            OpEnum::ModuleDef(self)
+        }
+    }
+
     impl Op for OpEnum {
-        type EntityT = EntityEnum;
-        type OpT = OpEnum;
         type ConstraintT = ConstraintEnum;
 
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
 
-        fn get_defs<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
+        fn get_defs<E: Environ>(&self, env: &E) -> Vec<EntityId> {
             match self {
                 OpEnum::Assign(assign) => assign.get_defs(env),
                 OpEnum::Constant(constant) => constant.get_defs(env),
@@ -855,10 +752,7 @@ mod tests {
             }
         }
 
-        fn get_uses<'env: 't, 't, E: Environ<EntityT = Self::EntityT>>(
-            &'t self,
-            env: &'env E,
-        ) -> Vec<&'t Self::EntityT> {
+        fn get_uses<E: Environ>(&self, env: &E) -> Vec<EntityId> {
             match self {
                 OpEnum::Assign(assign) => assign.get_uses(env),
                 OpEnum::Constant(constant) => constant.get_uses(env),
@@ -889,25 +783,15 @@ mod tests {
             }
         }
 
-        fn verify<
-            'env,
-            E: Environ<
-                EntityT = Self::EntityT,
-                ConstraintT = Self::ConstraintT,
-                ConstantT = Self::ConstantT,
-            >,
-        >(
-            &self,
-            env: &'env E,
-        ) -> bool {
+        fn get_verifiers(&self) -> Vec<Self::ConstraintT> {
             match self {
-                OpEnum::Assign(assign) => assign.verify(env),
-                OpEnum::Constant(constant) => constant.verify(env),
-                OpEnum::ModuleDef(mdef) => mdef.verify(env),
+                OpEnum::Assign(assign) => assign.get_verifiers(),
+                OpEnum::Constant(constant) => constant.get_verifiers(),
+                OpEnum::ModuleDef(mdef) => mdef.get_verifiers(),
             }
         }
 
-        fn get_parent(&self) -> Option<EntityId> {
+        fn get_parent(&self) -> Option<RegionId> {
             match self {
                 OpEnum::Assign(assign) => assign.get_parent(),
                 OpEnum::Constant(constant) => constant.get_parent(),
@@ -915,15 +799,7 @@ mod tests {
             }
         }
 
-        fn into_enum(self) -> Self::OpT {
-            match self {
-                OpEnum::Assign(assign) => assign.into_enum(),
-                OpEnum::Constant(constant) => constant.into_enum(),
-                OpEnum::ModuleDef(mdef) => mdef.into_enum(),
-            }
-        }
-
-        fn set_parent(&mut self, parent: EntityId) {
+        fn set_parent(&mut self, parent: RegionId) {
             match self {
                 OpEnum::Assign(assign) => assign.set_parent(parent),
                 OpEnum::Constant(constant) => constant.set_parent(parent),
@@ -1006,7 +882,8 @@ mod tests {
     struct CirctEnv {
         op_table: FxMapWithUniqueId<OpEnum>,
         entity_table: FxMapWithUniqueId<EntityEnum>,
-        parent: Option<EntityId>,
+        region_table: FxMapWithUniqueId<Region>,
+        parent_stack: Vec<RegionId>,
     }
 
     impl Environ for CirctEnv {
@@ -1016,24 +893,36 @@ mod tests {
 
         type ConstraintT = ConstraintEnum;
 
-        type ConstantT = ConstVal;
+        type ConstantT = ConstVal<DataTypeEnum>;
 
         // TODO: Add specific data structure for def-use storage
-        fn get_def<'a, 't: 'a, ID: Id>(&'t self, id: &'a ID) -> Option<&'a Self::OpT> {
+        fn get_def<ID: Id>(&self, id: &ID) -> Option<OpId> {
             self.op_table
                 .iter()
                 .find(|tuple| tuple.1.defs(id))
-                .map(|tuple| tuple.1)
+                .map(|tuple| OpId::from(*tuple.0))
         }
 
-        fn get_uses<'a, 't: 'a, ID: Id>(&'t self, id: &'a ID) -> Vec<&'a Self::OpT> {
+        // fn get_uses<'a, 't: 'a, ID: Id>(&'t self, id: &'a ID) -> Vec<&'a Self::OpT> {
+        fn get_uses<ID: Id>(&self, id: &ID) -> Vec<OpId> {
             let mut v = Vec::new();
-            for (_, op) in self.op_table.get_map() {
+            for (id, op) in self.op_table.get_map() {
                 if op.uses(id) {
-                    v.push(op);
+                    v.push(OpId::from(*id));
                 }
             }
             v
+        }
+
+        fn get_entitiy<ID: Id>(&self, id: &ID) -> &Self::EntityT {
+            match self.entity_table.get(&id.id()) {
+                Some(entity) => entity,
+                None => panic!(
+                    "get entity not in the table by id \ntable: {:#?}\nentity: {:#?}",
+                    self.entity_table.get_map(),
+                    id.id()
+                ),
+            }
         }
 
         fn get_entities<ID: Id>(&self, ids: &[&ID]) -> Vec<&Self::EntityT> {
@@ -1050,18 +939,24 @@ mod tests {
         }
 
         fn set_entity_parent<ID: Id>(&mut self, id: &ID) {
-            if let Some(parent) = self.parent {
+            if let Some(parent) = self.parent_stack.last() {
                 self.entity_table
                     .entry(id.id())
-                    .and_modify(|entity| entity.set_parent(parent));
+                    .and_modify(|entity| entity.set_parent(parent.to_owned()));
+                self.region_table.entry(parent.id()).and_modify(|region|
+                    region.add_entity_child(EntityId(id.id()))
+                );
             }
         }
 
         fn set_op_parent<ID: Id>(&mut self, id: &ID) {
-            if let Some(parent) = self.parent {
+            if let Some(parent) = self.parent_stack.last() {
                 self.op_table
                     .entry(id.id())
-                    .and_modify(|entity| entity.set_parent(parent));
+                    .and_modify(|entity| entity.set_parent(parent.to_owned()));
+                self.region_table.entry(parent.id()).and_modify(|region|
+                    region.add_op_child(OpId(id.id()))
+                );
             }
         }
 
@@ -1076,10 +971,27 @@ mod tests {
             OpId(id)
         }
 
-        fn with_region<F: for<'a> Fn(&mut Self) -> () >(&mut self, parent:EntityId, f: F) {
-            self.parent = Some(parent);
+        fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F) {
+            self.parent_stack.push(parent);
             f(self);
-            self.parent = None;
+            self.parent_stack.pop();
+        }
+
+        fn get_region<ID: Id>(&mut self, id:&ID) -> &Region {
+            match self.region_table.get(&id.id()) {
+                Some(region) => region,
+                None => panic!(
+                    "get region not in the table by id \ntable: {:#?}\nregion: {:#?}",
+                    self.region_table.get_map(),
+                    id.id()
+                ),
+            }
+        }
+
+        // TODO: Support nested region
+        fn add_region(&mut self, region: Region) -> RegionId {
+            let (id, _) = self.region_table.insert_with_id(region);
+            RegionId(id)
         }
     }
 
@@ -1088,15 +1000,28 @@ mod tests {
     #[test]
     fn test_circt_ir() {
         let mut env = CirctEnv::default();
-        let module = env.add_entity(Module::new("default").into_enum());
-        let region = env.add_entity(Region::new().into_enum());
-        let module_def = env.add_op(ModuleDef::new(module, region).into_enum());
+        let module = env.add_entity(Module::new("default").into());
+        let region = env.add_region(Region::new().into());
+        let module_def = env.add_op(ModuleDef::new(module, region).into());
 
         env.with_region(region, |env| {
-            let wire0 = env.add_entity(Wire::new("w0", DataTypeEnum::Uint(8)).into_enum());
-            let wire1 = env.add_entity(Wire::new("w1", DataTypeEnum::Uint(8)).into_enum());
-            let constant = env.add_op(Constant::new(wire0, ConstVal { value: 1, dtyp: DataTypeEnum::Uint(8) }).into_enum());
-            let assign = env.add_op(Assign::new(wire1, wire0).into_enum());
+            let child_region = env.add_region(Region::new().into());
+            env.with_region(child_region, |env| {
+                let wire_grand = env.add_entity(Wire::new("w_grand", DataTypeEnum::Uint(8)).into());
+            });
+            let wire0 = env.add_entity(Wire::new("w0", DataTypeEnum::Uint(8)).into());
+            let wire1 = env.add_entity(Wire::new("w1", DataTypeEnum::Uint(8)).into());
+            let constant = env.add_op(
+                Constant::new(
+                    wire0,
+                    ConstVal {
+                        value: 1,
+                        dtyp: DataTypeEnum::Uint(8),
+                    },
+                )
+                .into(),
+            );
+            let assign = env.add_op(Assign::new(wire1, wire0).into());
         });
 
         println!("{:#?}", env);
