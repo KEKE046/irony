@@ -31,11 +31,11 @@ impl Id for EntityId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Region {
-    id: usize,
-    op_children: Vec<OpId>,
-    entity_children: Vec<EntityId>,
+    pub id: usize,
+    pub op_children: Vec<OpId>,
+    pub entity_children: Vec<EntityId>,
 }
 
 impl Id for Region {

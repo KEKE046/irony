@@ -13,10 +13,10 @@ pub trait ConstraintTrait {
     fn verify<'env, E, EntityT: Entity>(
         &self,
         env: &'env E,
-        values: Vec<(String, Vec<Self::AttributeT>)>,
+        attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<EntityId>)>,
         defs: Vec<(String, Vec<EntityId>)>,
-        regions: Vec<(String, Vec<RegionId>)>,
+        regions: Vec<(String, RegionId)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -29,24 +29,24 @@ pub struct SameTypeConstraint<D, A> {
     _marker: PhantomData<(D, A)>
 }
 
-impl<D: PartialEq, A: AttributeTrait<D>> ConstraintTrait for SameTypeConstraint<D, A>{
+impl<D: PartialEq, A: AttributeTrait<DataTypeT = D>+Clone+PartialEq> ConstraintTrait for SameTypeConstraint<D, A>{
     type DataTypeT = D;
     type AttributeT = A;
     fn verify<'env, E, EntityT: Entity>(
         &self,
         env: &'env E,
-        values: Vec<(String, Vec<Self::AttributeT>)>,
+        attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<EntityId>)>,
         defs: Vec<(String, Vec<EntityId>)>,
-        _regions: Vec<(String, Vec<RegionId>)>,
+        _regions: Vec<(String, RegionId)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
         EntityT: Entity<DataTypeT = Self::DataTypeT>
     {
 
-        let value_tys = values.into_iter().map(|pair| pair.1
-    ).flat_map(|v| v.iter().map(|value| Some(value.dtype())).collect::<Vec<_>>());
+        let value_tys = attrs.into_iter().map(|pair| pair.1
+    ).map(|value| Some(value.dtype()));
         let uses_tys = uses.into_iter().map(|pair| pair.1).flat_map(|v| v.iter().map(|x| env.get_entity(x.to_owned()).get_dtype()).collect::<Vec<_>>());
         let defs_tys = defs.into_iter().map(|pair| pair.1).flat_map(|v| v.iter().map(|x| env.get_entity(x.to_owned()).get_dtype()).collect::<Vec<_>>());
 
@@ -70,16 +70,16 @@ pub struct SameTypeOperandConstraint<D, A> {
     _marker: PhantomData<(D, A)>
 }
 
-impl<D: PartialEq, A: AttributeTrait<D>> ConstraintTrait for SameTypeOperandConstraint<D, A>{
+impl<D: PartialEq, A: AttributeTrait<DataTypeT = D>> ConstraintTrait for SameTypeOperandConstraint<D, A>{
     type DataTypeT = D;
     type AttributeT = A;
     fn verify<'env, E, EntityT: Entity>(
         &self,
         env: &'env E,
-        _values: Vec<(String, Vec<Self::AttributeT>)>,
+        _attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<EntityId>)>,
         _defs: Vec<(String, Vec<EntityId>)>,
-        _regions: Vec<(String, Vec<RegionId>)>,
+        _regions: Vec<(String, RegionId)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -108,7 +108,7 @@ macro_rules! constraint_def {
     (
         [data_type = $dtype:ty, attr = $attr:ty] 
         $name:ident = {
-            $($variant:ident($variant_ty:ident$($block:block)?),)*
+            $($variant:ident($variant_ty:ident$(,$($tt:tt)*)?),)*
         }
     ) => {
         #[derive(Clone, Debug, PartialEq)]
@@ -122,16 +122,16 @@ macro_rules! constraint_def {
             fn verify<'env, E, EntityT: irony::Entity>(
                 &self,
                 env: &'env E,
-                values: Vec<(String, Vec<Self::AttributeT>)>,
+                attrs: Vec<(String, Self::AttributeT)>,
                 uses: Vec<(String, Vec<irony::EntityId>)>,
                 defs: Vec<(String, Vec<irony::EntityId>)>,
-                regions: Vec<(String, Vec<irony::RegionId>)>,
+                regions: Vec<(String, irony::RegionId)>,
             ) -> bool
             where
                 E: irony::Environ<EntityT = EntityT>,
                 EntityT: irony::Entity<DataTypeT = Self::DataTypeT> {
                     match self {
-                        $($name::$variant(inner) => inner.verify(env, values, uses, defs, regions)),*
+                        $($name::$variant(inner) => inner.verify(env, attrs, uses, defs, regions)),*
                     }
                 }
         }
@@ -146,30 +146,37 @@ macro_rules! constraint_def {
 
         $(
             $(
-                #[derive(Default, Clone, Debug, PartialEq)]
-                pub struct $variant_ty;
-                impl irony::ConstraintTrait for $variant_ty {
-                    type DataTypeT = $dtype;
-                
-                    type AttributeT = $attr;
-                
-                    fn verify<'env, E, EntityT: irony::Entity>(
-                        &self,
-                        env: &'env E,
-                        values: Vec<(String, Vec<Self::AttributeT>)>,
-                        uses: Vec<(String, Vec<irony::EntityId>)>,
-                        defs: Vec<(String, Vec<irony::EntityId>)>,
-                        regions: Vec<(String, Vec<irony::RegionId>)>,
-                    ) -> bool
-                    where
-                        E: irony::Environ<EntityT = EntityT>,
-                        EntityT: irony::Entity<DataTypeT = Self::DataTypeT> {
-                            $block
-                    }
-                }
+            irony::constraint_struct_impl!($variant_ty, $dtype, $attr, $($tt)*);
             )?
-
         )*
     };
 
+}
+
+#[macro_export]
+macro_rules! constraint_struct_impl {
+    ($variant_ty:ident, $dtype:ty, $attr:ty, $($tt:tt)*) => {
+        #[derive(Default, Clone, Debug, PartialEq)]
+        pub struct $variant_ty;
+        impl irony::ConstraintTrait for $variant_ty {
+            type DataTypeT = $dtype;
+        
+            type AttributeT = $attr;
+        
+            fn verify<'env, E, EntityT: irony::Entity>(
+                &self,
+                env: &'env E,
+                attrs: Vec<(String, Self::AttributeT)>,
+                uses: Vec<(String, Vec<irony::EntityId>)>,
+                defs: Vec<(String, Vec<irony::EntityId>)>,
+                regions: Vec<(String, irony::RegionId)>,
+            ) -> bool
+            where
+                E: irony::Environ<EntityT = EntityT>,
+                EntityT: irony::Entity<DataTypeT = Self::DataTypeT> {
+                    let f = $($tt)*;
+                    f(env, attrs, uses, defs, regions)
+                }
+        }
+    };
 }

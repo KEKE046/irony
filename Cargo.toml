@@ -3,4 +3,5 @@
 members = [
   "irony",
   "irony_examples",
+  "irony_circt"
 ]

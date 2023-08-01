@@ -1,3 +1,5 @@
+#[allow(unused_variables)]
+
 use irony::{self, preclude::*};
 
 /// define types and attributes
@@ -18,7 +20,7 @@ irony::entity_def! {
 }
 
 irony::op_def! {
-    [attr = AttributeEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
         // ------ BEGIN: define the operations in `hw` dialect -------
@@ -42,7 +44,7 @@ irony::op_def! {
         Instance: {
             defs: [; outputs],
             uses: [; inputs],
-            attrs: [target_id: StringAttr(StringAttr), instance_name: StringAttr(StringAttr)],
+            attrs: [target_id: UIntAttr(UIntAttr), instance_name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
             regions: [], 
         },
@@ -50,7 +52,7 @@ irony::op_def! {
         Input: {
             defs: [; inputs],
             uses: [],
-            attrs: [name: StringAttr(StringAttr), dtype: TypeAttr(TypeAttr)],
+            attrs: [],
             constraints: [],
             regions: [],
         },
@@ -58,7 +60,7 @@ irony::op_def! {
         Output: {
             defs: [],
             uses: [; outputs],
-            attrs: [name: StringAttr(StringAttr), dtype: TypeAttr(TypeAttr)],
+            attrs: [],
             constraints:[],
             regions: [],
         },
@@ -82,7 +84,7 @@ irony::op_def! {
         AggregateConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [values: ArrayAttr(ArrayAttr)],
+            attrs: [attrs: ArrayAttr(ArrayAttr)],
             constraints: [SameTypeAggregate::default().into()],
             regions: [],
         },
@@ -156,7 +158,7 @@ irony::op_def! {
 }
 
 irony::environ_def! {
-    [entity = EntityEnum, op = OpEnum, attr = AttributeEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
     struct CirctEnv;
 }
 

@@ -1,16 +1,19 @@
-use crate::RegionId;
+use std::fmt::Debug;
+
+use crate::{RegionId, ConstraintTrait, AttributeTrait};
 
 use super::common::Id;
 use super::entity::EntityId;
 
-pub trait Op: Id {
-    type AttributeT;
-    type ConstraintT;
+pub trait Op: Id+Debug {
+    type DataTypeT;
+    type AttributeT: AttributeTrait<DataTypeT = Self::DataTypeT>;
+    type ConstraintT: ConstraintTrait<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
 
     fn get_defs(&self) -> Vec<(String, Vec<EntityId>)>;
     fn get_uses(&self) -> Vec<(String, Vec<EntityId>)>;
 
-    fn get_attrs(&self) -> Vec<(String, Vec<Self::AttributeT>)>;
+    fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
     fn get_constraints(&self) -> Vec<Self::ConstraintT>;
 
     fn uses(&self, entity: EntityId) -> bool;
@@ -22,6 +25,8 @@ pub trait Op: Id {
     fn get_regions(&self) -> Vec<(String, RegionId)>;
 
     fn use_region(&self, region: RegionId) -> bool;
+
+    fn get_op_name(&self) -> String;
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -43,7 +48,7 @@ impl Id for OpId {
 #[macro_export]
 macro_rules! op_def {
     (
-        [attr = $attr_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
         $name_enum:ident = {
             $(
                 $name_op:ident: {
@@ -59,7 +64,7 @@ macro_rules! op_def {
 
         $(
             irony::op_def_one! {
-                [attr = $attr_ty, constraint = $constraint_ty]
+                [data_type = $data_ty, attr = $attr_ty, constraint = $constraint_ty]
                 $name_op : {
                     defs : [$($def),*$(;$($variadic_def),+)?],
                     uses : [$($use),*$(;$($variadic_use),+)?],
@@ -71,7 +76,7 @@ macro_rules! op_def {
         )*
 
         irony::op_enum! {
-            [attr = $attr_ty, constraint = $constraint_ty]
+            [data_type = $data_ty, attr = $attr_ty, constraint = $constraint_ty]
             $name_enum = $($name_op),*
         }
 
@@ -81,7 +86,7 @@ macro_rules! op_def {
 #[macro_export]
 macro_rules! op_def_one {
     (
-        [attr = $attr_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
         $name:ident : {
             defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
             uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
@@ -93,6 +98,7 @@ macro_rules! op_def_one {
         #[derive(PartialEq, Debug)]
         pub struct $name  {
             id: usize,
+            op_name: String,
             $($def: irony::EntityId,)*
             $($($variadic_def: Vec<irony::EntityId>,)*)?
             $($use: irony::EntityId,)*
@@ -114,6 +120,7 @@ macro_rules! op_def_one {
         }
 
         impl irony::Op for $name {
+            type DataTypeT = $data_ty;
             type ConstraintT = $constraint_ty;
             type AttributeT = $attr_ty;
 
@@ -132,9 +139,9 @@ macro_rules! op_def_one {
 
             }
 
-            fn get_attrs(&self) -> Vec<(String, Vec<Self::AttributeT>)> {
+            fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 vec![
-                    $((format!("{}", stringify!($attr)), vec![self.$attr.to_owned().into()])),*
+                    $((format!("{}", stringify!($attr)), self.$attr.to_owned().into())),*
                 ]
             }
 
@@ -167,6 +174,10 @@ macro_rules! op_def_one {
             fn use_region(&self, region: irony::RegionId) -> bool{
                 self.get_regions().iter().any(|(_, id)| *id == region)
             }
+
+            fn get_op_name(&self) -> String {
+                self.op_name.clone()
+            }
         }
 
 
@@ -182,6 +193,7 @@ macro_rules! op_def_one {
 
                 Self {
                     id: 0,
+                    op_name: stringify!($name).to_owned(),
                     $($def,)*
                     $($($variadic_def,)*)?
                     $($use,)*
@@ -203,7 +215,7 @@ macro_rules! op_def_one {
 
 #[macro_export]
 macro_rules! op_enum {
-    ([attr = $attr:ty, constraint = $constraint:ty] $name:ident = $($variant:ident),*) => {
+    ([data_type = $data_ty:ty, attr = $attr:ty, constraint = $constraint:ty] $name:ident = $($variant:ident),*) => {
         #[derive(PartialEq, Debug)]
         pub enum $name {
             $($variant($variant)),*
@@ -231,6 +243,7 @@ macro_rules! op_enum {
         }
 
         impl irony::Op for $name {
+            type DataTypeT = $data_ty;
             type AttributeT = $attr;
             type ConstraintT = $constraint;
 
@@ -245,7 +258,7 @@ macro_rules! op_enum {
                 }
             }
 
-            fn get_attrs(&self) -> Vec<(String, Vec<Self::AttributeT>)> {
+            fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 match self {
                     $($name::$variant(inner) => inner.get_attrs()),*
                 }
@@ -290,6 +303,12 @@ macro_rules! op_enum {
             fn use_region(&self, region: irony::RegionId) -> bool{
                 match self {
                     $($name::$variant(inner) => inner.use_region(region)),*
+                }
+            }
+            
+            fn get_op_name(&self) -> String {
+                match self {
+                    $($name::$variant(inner) => inner.get_op_name()),*
                 }
             }
         }

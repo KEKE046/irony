@@ -1,15 +1,16 @@
-use crate::{Region, RegionId};
+use crate::{AttributeTrait, Region, RegionId};
 
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
 use super::operation::{Op, OpId};
 
+pub trait Environ: Sized {
+    type DataTypeT;
+    type AttributeT: AttributeTrait<DataTypeT = Self::DataTypeT>;
 
-pub trait Environ {
-    type OpT: Op;
-    type EntityT: Entity;
-    type ConstraintT: ConstraintTrait;
-    type AttributeT;
+    type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
+    type EntityT: Entity<DataTypeT = Self::DataTypeT>;
+    type ConstraintT: ConstraintTrait<AttributeT = Self::AttributeT, DataTypeT = Self::DataTypeT>;
 
     fn get_def(&self, id: EntityId) -> Option<OpId>;
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
@@ -26,16 +27,38 @@ pub trait Environ {
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
 
     fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F);
+    fn verify_op(&self, op: OpId) -> bool {
+        let op = self.get_op(op);
+        let constraints = op.get_constraints();
+        let attributes = op.get_attrs();
+        let uses = op.get_uses();
+        let defs = op.get_defs();
+        let regions = op.get_regions();
+        println!("Verifying op: {:#?}", op);
+        let all_true = constraints.into_iter().all(|constraint| {
+            constraint.verify(
+                self,
+                attributes.to_owned(),
+                defs.to_owned(),
+                uses.to_owned(),
+                regions.to_owned(),
+            )
+        });
+
+        println!("all_true is {}", all_true);
+        all_true
+    }
 }
 
 #[macro_export]
 macro_rules! environ_def {
     (
-        [entity = $entity_ty:ty, op = $op_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
         struct $name:ident;
     ) => {
         irony::environ_def! {
             @inner
+            DATATYPE: $data_ty;
             ENTITY: $entity_ty;
             OP: $op_ty;
             ATTR: $attr_ty;
@@ -46,7 +69,7 @@ macro_rules! environ_def {
     };
 
     (
-        [entity = $entity_ty:ty, op = $op_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
         struct $name:ident {
             $(
                 $field_vis:vis $field_name:ident : $field_ty:ty
@@ -55,6 +78,7 @@ macro_rules! environ_def {
     ) => {
         irony::environ_def! {
             @inner
+            DATATYPE: $data_ty;
             ENTITY: $entity_ty;
             OP: $op_ty;
             ATTR: $attr_ty;
@@ -65,6 +89,7 @@ macro_rules! environ_def {
     };
 
     (@inner
+        DATATYPE: $data_ty:ty;
         ENTITY: $entity_ty:ty;
         OP: $op_ty:ty;
         ATTR: $attr_ty:ty;
@@ -84,21 +109,23 @@ macro_rules! environ_def {
         }
 
         impl irony::Environ for $name {
+            type DataTypeT = $data_ty;
+
             type OpT = $op_ty;
-        
+
             type EntityT = $entity_ty;
-        
+
             type ConstraintT = $constraint_ty;
-        
+
             type AttributeT = $attr_ty;
-        
+
             fn get_def(&self, entity: irony::EntityId) -> Option<irony::OpId> {
                 self.op_table
                 .iter()
                 .find(|tuple| tuple.1.defs(entity))
                 .map(|tuple| irony::OpId::from(*tuple.0))
             }
-        
+
             fn get_uses(&self, entity: irony::EntityId) -> Vec<irony::OpId> {
                 let mut v = Vec::new();
                 for (id, op) in self.op_table.get_map() {
@@ -108,7 +135,7 @@ macro_rules! environ_def {
                 }
                 v
             }
-        
+
             fn get_entity(&self, id: irony::EntityId) -> &Self::EntityT {
                 match self.entity_table.get(&id.id()) {
                     Some(entity) => entity,
@@ -119,7 +146,7 @@ macro_rules! environ_def {
                     ),
                 }
             }
-        
+
             fn get_entities(&self, ids: &[irony::EntityId]) -> Vec<&Self::EntityT> {
                 ids.iter()
                 .map(|id| self.get_entity(id.to_owned()))
@@ -141,13 +168,13 @@ macro_rules! environ_def {
                 .map(|id| self.get_op(id.to_owned()))
                 .collect()
             }
-        
+
             fn add_entity(&mut self, entity: Self::EntityT) -> irony::EntityId {
                 let (id, _) = self.entity_table.insert_with_id(entity);
                 self.set_entity_parent(irony::EntityId::from(id));
                 irony::EntityId(id)
             }
-        
+
             fn get_region(&self, id: irony::RegionId) -> &irony::Region {
                 match self.region_table.get(&id.id()) {
                     Some(region) => region,
@@ -158,18 +185,18 @@ macro_rules! environ_def {
                     ),
                 }
             }
-        
+
             fn add_region(&mut self, region: irony::Region) -> irony::RegionId {
                 let (id, _) = self.region_table.insert_with_id(region);
                 irony::RegionId(id)
             }
-        
+
             fn add_op(&mut self, op: Self::OpT) -> irony::OpId {
                 let (id, op) = self.op_table.insert_with_id(op);
                 self.set_op_parent(irony::OpId::from(id));
                 irony::OpId(id)
             }
-        
+
             fn set_entity_parent(&mut self, id: irony::EntityId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.entity_table
@@ -180,7 +207,7 @@ macro_rules! environ_def {
                     );
                 }
             }
-        
+
             fn set_op_parent(&mut self, id: irony::OpId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.op_table
@@ -191,7 +218,7 @@ macro_rules! environ_def {
                     );
                 }
             }
-        
+
             fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
                 self.parent_stack.push(parent);
                 f(self);

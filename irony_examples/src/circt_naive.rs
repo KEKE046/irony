@@ -27,7 +27,7 @@ irony::entity_def! {
 }
 
 irony::op_def! {
-    [attr = AttributeEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
         Constant:  {
@@ -56,7 +56,7 @@ irony::op_def! {
 
 
 irony::environ_def! {
-    [entity = EntityEnum, op = OpEnum, attr = AttributeEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
     struct CirctEnv;
 }
 

@@ -24,8 +24,9 @@ impl Id for usize {
     }
 }
 
-pub trait AttributeTrait<DT> {
-    fn dtype(&self) -> DT;
+pub trait AttributeTrait: Clone {
+    type DataTypeT;
+    fn dtype(&self) -> Self::DataTypeT;
 }
 
 
@@ -35,7 +36,8 @@ pub struct ConstValueI32<D:Clone> {
     pub dtype: D,
 }
 
-impl<D:Clone> AttributeTrait<D> for ConstValueI32<D> {
+impl<D:Clone> AttributeTrait for ConstValueI32<D> {
+    type DataTypeT = D;
     fn dtype(&self) -> D {
         self.dtype.to_owned()
     }
@@ -65,7 +67,8 @@ macro_rules! attribute_enum {
         pub enum $name {
             $($variant($variant_ty)),*
         }
-        impl irony::AttributeTrait<$dtype> for $name {
+        impl irony::AttributeTrait for $name {
+            type DataTypeT = $dtype;
             fn dtype(&self) -> $dtype {
                 match self {
                     $($name::$variant(inner) => inner.dtype()),*

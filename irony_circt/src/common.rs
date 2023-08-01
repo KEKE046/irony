@@ -33,41 +33,57 @@ pub enum BinaryOpAttr {
     Sge,
 }
 
-impl AttributeTrait<DataTypeEnum> for BinaryOpAttr {
+impl AttributeTrait for BinaryOpAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
+
+    type DataTypeT=DataTypeEnum;
 }
 
-impl AttributeTrait<DataTypeEnum> for String {
+#[derive(Clone, Debug, PartialEq)]
+pub struct StringAttr(pub String);
+impl AttributeTrait for StringAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
+    type DataTypeT=DataTypeEnum;
 }
 
-impl AttributeTrait<DataTypeEnum> for u32 {
+#[derive(Clone, Debug, PartialEq)]
+pub struct UIntAttr(pub u32);
+impl AttributeTrait for UIntAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
+    type DataTypeT=DataTypeEnum;
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeAttr(pub DataTypeEnum);
-impl AttributeTrait<DataTypeEnum> for TypeAttr {
+impl AttributeTrait for TypeAttr {
     fn dtype(&self) -> DataTypeEnum {
         self.0.clone()
     }
+    type DataTypeT=DataTypeEnum;
 }
 
 pub type ConstAttr = irony::ConstValueI32<DataTypeEnum>;
-pub type StringAttr = String;
-pub type UIntAttr = u32;
 
-pub type ArrayAttr = Vec<Box<AttributeEnum>>;
 
-impl AttributeTrait<DataTypeEnum> for ArrayAttr {
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrayAttr(pub Vec<AttributeEnum>);
+impl AttributeTrait for ArrayAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
+    }
+    type DataTypeT=DataTypeEnum;
+}
+
+impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
+    fn into(self) -> ArrayAttr {
+        ArrayAttr(self.into_iter().map(|x| x.into()).collect())
     }
 }
 
