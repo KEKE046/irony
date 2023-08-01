@@ -34,18 +34,23 @@ loot at `irony` package
 
 ### CIRCT core dialects
 
-- common:
-  - [x] Attributes:
-    - [x] StringAttr
-    - [x] ArrayAttr
-    - [x] TypeAttr
-
-<details><summary>`hw` dialect</summary>
+#### Common
+- [x] Attributes:
+  - [x] StringAttr
+  - [x] ArrayAttr
+  - [x] TypeAttr
 - [x] Data types [DataType]
   - [x] IntType: signless, with width parameter;
   - [x] StructType: `!hw.struct<fieldName1: Type1, fieldName2: Type2>`
   - [x] ArrayType: `!hw.array<k*elementType>`
   - [x] UnpackedArrayType: `!hw.uarray<k*elementType>`
+
+#### `hw` Dialect
+
+<details>
+
+<summary>implementation progress</summary>
+
 - [x] Module structure [Operation]
   - [x] ModuleOp: `!hw.module<name: StringAttr, body: Region>`
     - [x] attributes: name, arg_names, output_names, arg_types, output_types
@@ -64,4 +69,5 @@ loot at `irony` package
   - [x] Array things: ArrayConcatOp ArrayCreateOp ArrayGetOp ArraySliceOp
   - [x] Struct things: StructCreateOp StructExplodeOp StructExtractOp StructInjectOp
   - [ ] constraints for ops above
+
 </details>
