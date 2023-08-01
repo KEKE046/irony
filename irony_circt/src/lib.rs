@@ -154,6 +154,68 @@ irony::op_def! {
         },
 
         // ------ END: define the operations in `hw` dialect -------
+
+        // ------ BEGIN: define the operations in `core` dialect -------
+        // TODO: Add more constraints for safer usage
+        CombVariadic: {
+            defs: [lhs],
+            uses: [; operands],
+            attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)],
+            constraints: [SameType::new().into()],
+            regions: [],
+        },
+        CombBinary: {
+            defs: [lhs],
+            uses: [op0, op1],
+            attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)],
+            constraints: [SameType::new().into()],
+            regions: [],
+        },
+        CombICmp: {
+            defs: [lhs],
+            uses: [op0, op1],
+            attrs: [predicate: CombICmpPredicate(CombICmpPredicate)],
+            constraints: [SameTypeOperands::new().into()],
+            regions: [],
+        },
+        CombParity: {
+            defs: [lhs],
+            uses: [rhs],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions:[],
+        },
+        CombExtract: {
+            defs: [lhs],
+            uses: [input, low],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
+        CombConcat: {
+            defs: [lhs],
+            uses: [; operands],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
+        CombReplicate: {
+            defs: [lhs],
+            uses: [rhs],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
+        CombMux2: {
+            defs: [lhs],
+            uses: [cond, op0, op1],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
+        // ------ END: define the operations in `core` dialect -------
+
+        
     }
 }
 

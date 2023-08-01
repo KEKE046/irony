@@ -35,6 +35,7 @@ loot at `irony` package
 ### CIRCT core dialects
 
 #### Common
+
 - [x] Attributes:
   - [x] StringAttr
   - [x] ArrayAttr
@@ -69,5 +70,20 @@ loot at `irony` package
   - [x] Array things: ArrayConcatOp ArrayCreateOp ArrayGetOp ArraySliceOp
   - [x] Struct things: StructCreateOp StructExplodeOp StructExtractOp StructInjectOp
   - [ ] constraints for ops above
+
+</details>
+
+#### `comb` Dialect
+
+<details>
+
+<summary>implementation progress</summary>
+
+- [x] Variadic Op:     Add,    Mul,    And,    Or,    Xor
+- [x] Binary Op:     DivU,    DivS,    ModU,    ModS,    Shl,    ShrU,    ShrS,    Sub
+- [x] ICmp Op
+- [x] CombParity, CombExtract, CombConcat, CombReplicate
+- [x] CombMux2
+- [ ] CombMux_k (*This is specific in irony-circt*)
 
 </details>

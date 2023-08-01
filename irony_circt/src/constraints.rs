@@ -20,7 +20,6 @@ irony::constraint_def! {
             
             // TODO: check output_namesa and output_types have the same length
 
-
             irony::utils::extract_vec(&attrs, "arg_types") == super::utils::extract_input_types(env, region) &&
             irony::utils::extract_vec(&attrs, "output_types") == super::utils::extract_output_types(env, region)
         }),
@@ -35,11 +34,6 @@ irony::constraint_def! {
             let target_def = target.get_def(env).unwrap();
             let (_, target_region) = env.get_op(target_def).get_regions()[0];
 
-            println!("target_region: {:#?}", env.get_region(target_region));
-
-            println!("output_types: {:#?}", super::utils::extract_output_types(env, target_region));
-            println!("instance_defs_types: {:#?}", super::utils::extract_types(env, defs[0].1.to_owned()));
-
             super::utils::extract_input_types(env, target_region) == super::utils::extract_types(env, uses[0].1.to_owned())
             && 
             super::utils::extract_output_types(env, target_region) == super::utils::extract_types(env, defs[0].1.to_owned())
@@ -47,40 +41,40 @@ irony::constraint_def! {
         }),
 
         SameTypeAggregate(SameTypeAggregate ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         ArrayConcatConstraint(ArrayConcatConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         ArrayCreateConstraint(ArrayCreateConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         ArrayGetConstraint(ArrayGetConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         ArraySliceConstraint(ArraySliceConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         StructCreateConstraint(StructCreateConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         StructExtractConstraint(StructExtractConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         StructInjectConstraint(StructInjectConstraint ,
-            |env, attrs, uses, defs, regions|  {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
         StructExplodeConstraint(StructExplodeConstraint  ,
-            |env, attrs, uses, defs, regions| {
-                unimplemented!()
+            |_, _, _, _, _|  {
+                true
         }),
     }
 }

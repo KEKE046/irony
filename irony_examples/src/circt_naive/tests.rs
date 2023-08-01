@@ -29,7 +29,7 @@ mod basics {
             );
             let assign = env.add_op(Assign::new(wire1, wire0).into());
 
-            assert_eq!(env.get_entity(wire0).get_uses(env), vec![assign]);
+            assert_eq!(wire0.get(env).get_uses(env), vec![assign]);
             assert_eq!(env.get_entity(wire0).get_def(env), Some(constant));
 
             assert_eq!(env.get_entity(wire1).get_uses(env), vec![]);

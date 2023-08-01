@@ -10,35 +10,108 @@ pub struct ArrayType(pub Box<DataTypeEnum>, pub usize);
 pub struct UArrayType(pub Box<DataTypeEnum>, pub usize);
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum BinaryOpAttr {
+pub enum CombVariadicPredicate {
     Add,
-    Sub,
     Mul,
-    Div,
-    Rem,
-    Shl,
-    Shr,
     And,
     Or,
-    Xor,
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    Slt,
-    Sle,
-    Sgt,
-    Sge,
+    Xor
 }
-
-impl AttributeTrait for BinaryOpAttr {
+impl AttributeTrait for CombVariadicPredicate {
+    type DataTypeT = DataTypeEnum;
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
+} 
 
-    type DataTypeT=DataTypeEnum;
+impl CombVariadicPredicate {
+    pub fn get_str(&self) -> &'static str {
+        match self {
+            CombVariadicPredicate::Add => "add",
+            CombVariadicPredicate::Mul => "mul",
+            CombVariadicPredicate::And => "and",
+            CombVariadicPredicate::Or => "or",
+            CombVariadicPredicate::Xor => "xor",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CombBinaryPredicate {
+    DivU,
+    DivS,
+    ModU,
+    ModS,
+    Shl,
+    ShrU,
+    ShrS,
+    Sub,
+}
+impl AttributeTrait for CombBinaryPredicate {
+    type DataTypeT = DataTypeEnum;
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+} 
+
+impl CombBinaryPredicate {
+    pub fn get_str(&self) -> &'static str {
+        match self {
+            CombBinaryPredicate::DivU => "divu",
+            CombBinaryPredicate::DivS => "divs",
+            CombBinaryPredicate::ModU => "modu",
+            CombBinaryPredicate::ModS => "mods",
+            CombBinaryPredicate::Shl => "shl",
+            CombBinaryPredicate::ShrU => "shru",
+            CombBinaryPredicate::ShrS => "shrs",
+            CombBinaryPredicate::Sub => "sub",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CombICmpPredicate {
+    EQ,
+    NE,
+    SLT,
+    SLE,
+    SGT,
+    SGE,
+    ULT,
+    ULE,
+    UGT,
+    UGE,
+    CEQ,
+    CNE,
+    WEQ,
+    WNE
+}
+impl AttributeTrait for CombICmpPredicate {
+    type DataTypeT = DataTypeEnum;
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+} 
+
+impl CombICmpPredicate {
+    pub fn get_str(&self) -> &'static str {
+        match self {
+            CombICmpPredicate::EQ => "eq",
+            CombICmpPredicate::NE => "ne",
+            CombICmpPredicate::SLT => "slt",
+            CombICmpPredicate::SLE => "sle",
+            CombICmpPredicate::SGT => "sgt",
+            CombICmpPredicate::SGE => "sge",
+            CombICmpPredicate::ULT => "ult",
+            CombICmpPredicate::ULE => "ule",
+            CombICmpPredicate::UGT => "ugt",
+            CombICmpPredicate::UGE => "uge",
+            CombICmpPredicate::CEQ => "ceq",
+            CombICmpPredicate::CNE => "cne",
+            CombICmpPredicate::WEQ => "weq",
+            CombICmpPredicate::WNE => "wne",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -97,5 +170,5 @@ irony::data_type_enum![
 
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
-    AttributeEnum = ConstAttr(ConstAttr), UIntAttr(UIntAttr), StringAttr(StringAttr), TypeAttr(TypeAttr), ArrayAttr(ArrayAttr), BinaryOpAttr(BinaryOpAttr)
+    AttributeEnum = ConstAttr(ConstAttr), UIntAttr(UIntAttr), StringAttr(StringAttr), TypeAttr(TypeAttr), ArrayAttr(ArrayAttr), CombVariadicPredicate(CombVariadicPredicate), CombBinaryPredicate(CombBinaryPredicate), CombICmpPredicate(CombICmpPredicate)
 }

@@ -31,6 +31,14 @@ impl Id for EntityId {
     }
 }
 
+impl EntityId {
+    pub fn get<'env: 't, 't, E>(&'t self, env: &'env E) -> &'t E::EntityT 
+    where E: Environ{
+        env.get_entity(self.to_owned())
+
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Region {
     pub id: usize,
