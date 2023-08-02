@@ -104,8 +104,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "irony_circt"
+version = "0.1.0"
+dependencies = [
+ "irony",
+]
+
+[[package]]
 name = "irony_examples"
 version = "0.1.0"
+dependencies = [
+ "irony",
+]
 
 [[package]]
 name = "libc"
