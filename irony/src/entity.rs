@@ -105,7 +105,13 @@ impl Region {
 
 #[macro_export]
 macro_rules! entity_def {
-    ([data_type = $data_type:ty] $name_enum:ident = {$($name:ident $(: (store_data=$expr:ident))?),+}) => {
+    (
+        [data_type = $data_type:ty] 
+        $name_enum:ident = {
+            $($name:ident $(: (store_data=$expr:ident))?),+
+            $(,)?
+        }
+    ) => {
         $(irony::entity_def_one! {
             $name : ($(store_data = $expr,)? data_type = $data_type)
         })*

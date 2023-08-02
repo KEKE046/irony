@@ -44,7 +44,7 @@ where
     E: irony::Environ<EntityT = EntityT>,
     EntityT: Entity<DataTypeT = DataTypeEnum>,
 {
-    extract_types_for_region(env, region_id, "Input", |op: &<E as Environ>::OpT| {
+    extract_types_for_region(env, region_id, "HwInput", |op: &<E as Environ>::OpT| {
         op.get_defs()
     })
 }
@@ -57,7 +57,7 @@ where
     E: irony::Environ<EntityT = EntityT>,
     EntityT: Entity<DataTypeT = DataTypeEnum>,
 {
-    extract_types_for_region(env, region_id, "Output", |op: &<E as Environ>::OpT| {
+    extract_types_for_region(env, region_id, "HwOutput", |op: &<E as Environ>::OpT| {
         op.get_uses()
     })
 }

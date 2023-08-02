@@ -45,7 +45,12 @@ impl<D:Clone> AttributeTrait for ConstValueI32<D> {
 
 #[macro_export]
 macro_rules! data_type_enum {
-    ($enum_name:ident = $($variant:ident$(($($inner:ident),*))?),*) => {
+    (
+        $enum_name:ident = {
+            $($variant:ident$(($($inner:ident),*))?),*
+            $(,)?
+        }
+    ) => {
         #[derive(Clone, Debug, PartialEq)]
         pub enum $enum_name {
             $($variant$(($($inner),*))?),*
@@ -55,14 +60,14 @@ macro_rules! data_type_enum {
 
 #[macro_export]
 macro_rules! attribute_enum {
-    ($enum_name:ident : $data_type:ident = $($variant:ident($variant_ty:ty)),*) => {
-        $attribute_enum! {
-            [data_type = $data_type]
-            $enum_name = $($variant:ident($variant_ty:ty)),*
-        }
-    };
 
-    ([data_type = $dtype: ty] $name:ident = $($variant:ident($variant_ty:ty)),*) => {
+    (
+        [data_type = $dtype: ty] 
+        $name:ident = {
+            $($variant:ident($variant_ty:ty)),*
+            $(,)?
+        }
+    ) => {
         #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
             $($variant($variant_ty)),*

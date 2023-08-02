@@ -19,6 +19,7 @@
 #### Planned Features
 
 - [ ] Pass and Pass Manager;
+- [ ] Logging system;
 - [ ] More concise APIs;
 - [ ] Type inference support;
 - [ ] More casual entity definition: flexible data storage;
@@ -45,6 +46,7 @@ loot at `irony` package
   - [x] StructType: `!hw.struct<fieldName1: Type1, fieldName2: Type2>`
   - [x] ArrayType: `!hw.array<k*elementType>`
   - [x] UnpackedArrayType: `!hw.uarray<k*elementType>`
+  - [x] SeqHlmemType
 
 #### `hw` Dialect
 
@@ -85,5 +87,16 @@ loot at `irony` package
 - [x] CombParity, CombExtract, CombConcat, CombReplicate
 - [x] CombMux2
 - [ ] CombMux_k (*This is specific in irony-circt*)
+
+</details>
+
+#### `seq` Dialect
+
+<details>
+
+<summary>implementation progress</summary>
+
+- [*] CompReg
+- [*] Hlmem, read, write
 
 </details>

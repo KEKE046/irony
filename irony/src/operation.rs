@@ -57,8 +57,9 @@ macro_rules! op_def {
                     attrs: [$($attr:ident : $attr_variant:ident($attr_inner_ty:ty)),*],
                     constraints: [$($constraint:expr),*],
                     regions: [$($region:ident),*],
-                },
-            )*
+                }
+            ),*
+            $(,)?
         }
     ) => {
 
@@ -133,7 +134,7 @@ macro_rules! op_def_one {
 
             fn get_uses(&self) -> Vec<(String, Vec<irony::EntityId>)> {
                 vec![
-                    $((format!("{}", stringify!($use)), vec![self.$use])),*
+                    $((format!("{}", stringify!($use)), vec![self.$use]),)*
                     $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned()))*)?
                 ]
 

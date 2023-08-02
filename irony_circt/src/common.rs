@@ -15,14 +15,14 @@ pub enum CombVariadicPredicate {
     Mul,
     And,
     Or,
-    Xor
+    Xor,
 }
 impl AttributeTrait for CombVariadicPredicate {
     type DataTypeT = DataTypeEnum;
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-} 
+}
 
 impl CombVariadicPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -52,7 +52,7 @@ impl AttributeTrait for CombBinaryPredicate {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-} 
+}
 
 impl CombBinaryPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -84,14 +84,14 @@ pub enum CombICmpPredicate {
     CEQ,
     CNE,
     WEQ,
-    WNE
+    WNE,
 }
 impl AttributeTrait for CombICmpPredicate {
     type DataTypeT = DataTypeEnum;
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-} 
+}
 
 impl CombICmpPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -120,7 +120,7 @@ impl AttributeTrait for StringAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-    type DataTypeT=DataTypeEnum;
+    type DataTypeT = DataTypeEnum;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -129,7 +129,7 @@ impl AttributeTrait for UIntAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-    type DataTypeT=DataTypeEnum;
+    type DataTypeT = DataTypeEnum;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -138,12 +138,10 @@ impl AttributeTrait for TypeAttr {
     fn dtype(&self) -> DataTypeEnum {
         self.0.clone()
     }
-    type DataTypeT=DataTypeEnum;
+    type DataTypeT = DataTypeEnum;
 }
 
 pub type ConstAttr = irony::ConstValueI32<DataTypeEnum>;
-
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
@@ -151,7 +149,7 @@ impl AttributeTrait for ArrayAttr {
     fn dtype(&self) -> DataTypeEnum {
         DataTypeEnum::None
     }
-    type DataTypeT=DataTypeEnum;
+    type DataTypeT = DataTypeEnum;
 }
 
 impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
@@ -160,15 +158,30 @@ impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
+
 irony::data_type_enum![
-    DataTypeEnum = UInt(usize),
-    Struct(StructType),
-    Array(ArrayType),
-    UArray(UArrayType),
-    None
+    DataTypeEnum = {
+        UInt(usize),
+        Struct(StructType),
+        Array(ArrayType),
+        UArray(UArrayType),
+        SeqHlmem(SeqHlmemType),
+        None
+    }
 ];
 
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
-    AttributeEnum = ConstAttr(ConstAttr), UIntAttr(UIntAttr), StringAttr(StringAttr), TypeAttr(TypeAttr), ArrayAttr(ArrayAttr), CombVariadicPredicate(CombVariadicPredicate), CombBinaryPredicate(CombBinaryPredicate), CombICmpPredicate(CombICmpPredicate)
+    AttributeEnum = {
+        ConstAttr(ConstAttr), 
+        UIntAttr(UIntAttr), 
+        StringAttr(StringAttr), 
+        TypeAttr(TypeAttr), 
+        ArrayAttr(ArrayAttr), 
+        CombVariadicPredicate(CombVariadicPredicate), 
+        CombBinaryPredicate(CombBinaryPredicate), 
+        CombICmpPredicate(CombICmpPredicate)
+    }
 }

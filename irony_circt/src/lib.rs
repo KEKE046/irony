@@ -25,15 +25,8 @@ irony::op_def! {
     OpEnum = {
         // ------ BEGIN: define the operations in `hw` dialect -------
 
-        Assign: {
-            defs: [lhs],
-            uses: [rhs],
-            attrs: [],
-            constraints: [SameType::new().into()],
-            regions: [],
-        },
 
-        ModuleDef: {
+        HwModule: {
             defs: [lhs],
             uses: [],
             attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
@@ -41,7 +34,7 @@ irony::op_def! {
             regions: [body],
         },
 
-        Instance: {
+        HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
             attrs: [target_id: UIntAttr(UIntAttr), instance_name: StringAttr(StringAttr)],
@@ -49,7 +42,7 @@ irony::op_def! {
             regions: [], 
         },
 
-        Input: {
+        HwInput: {
             defs: [; inputs],
             uses: [],
             attrs: [],
@@ -57,7 +50,7 @@ irony::op_def! {
             regions: [],
         },
 
-        Output: {
+        HwOutput: {
             defs: [],
             uses: [; outputs],
             attrs: [],
@@ -65,7 +58,7 @@ irony::op_def! {
             regions: [],
         },
 
-        BitCast: {
+        HwBitCast: {
             defs: [lhs],
             uses: [rhs],
             attrs: [],
@@ -73,7 +66,7 @@ irony::op_def! {
             regions: [],
         },
 
-        Constant: {
+        HwConstant: {
             defs: [lhs],
             uses: [],
             attrs: [value: ConstAttr(ConstAttr)],
@@ -81,7 +74,7 @@ irony::op_def! {
             regions: [],
         },
 
-        AggregateConstant: {
+        HwAggregateConstant: {
             defs: [lhs],
             uses: [],
             attrs: [attrs: ArrayAttr(ArrayAttr)],
@@ -89,7 +82,7 @@ irony::op_def! {
             regions: [],
         },
 
-        ArrayConcat: {
+        HwArrayConcat: {
             defs: [lhs],
             uses: [; operands],
             attrs: [],
@@ -97,7 +90,7 @@ irony::op_def! {
             regions: [],
         },
 
-        ArrayCreate: {
+        HwArrayCreate: {
             defs: [lhs],
             uses: [; operands],
             attrs: [],
@@ -105,7 +98,7 @@ irony::op_def! {
             regions: [],
         },
 
-        ArrayGet: {
+        HwArrayGet: {
             defs: [lhs],
             uses: [array, index],
             attrs: [],
@@ -113,7 +106,7 @@ irony::op_def! {
             regions: [],
         },
 
-        ArraySlice: {
+        HwArraySlice: {
             defs: [lhs],
             uses: [array, index],
             attrs: [],
@@ -121,7 +114,7 @@ irony::op_def! {
             regions: [],
         },
 
-        StructCreate: {
+        HwStructCreate: {
             defs: [lhs],
             uses: [; operands],
             attrs: [],
@@ -129,7 +122,7 @@ irony::op_def! {
             regions: [],
         },
 
-        StructExtract: {
+        HwStructExtract: {
             defs: [lhs],
             uses: [struct_input, field],
             attrs: [],
@@ -137,7 +130,7 @@ irony::op_def! {
             regions: [],
         },
 
-        StructInject: {
+        HwStructInject: {
             defs: [lhs],
             uses: [struct_input, field, new_value],
             attrs: [],
@@ -145,7 +138,7 @@ irony::op_def! {
             regions: [],
         },
 
-        StructExplode: {
+        HwStructExplode: {
             defs: [; outputs],
             uses: [struct_input],
             attrs: [],
@@ -155,7 +148,7 @@ irony::op_def! {
 
         // ------ END: define the operations in `hw` dialect -------
 
-        // ------ BEGIN: define the operations in `core` dialect -------
+        // ------ BEGIN: define the operations in `comb` dialect -------
         // TODO: Add more constraints for safer usage
         CombVariadic: {
             defs: [lhs],
@@ -213,8 +206,40 @@ irony::op_def! {
             constraints: [/* TODO: fill this */],
             regions: [],
         },
-        // ------ END: define the operations in `core` dialect -------
+        // ------ END: define the operations in `comb` dialect -------
+        
+        // ------ BEGIN: define the operations in `seq` dialect -------
+        SeqCompReg: {
+            defs: [; outputs],
+            uses: [clk,reset,reset_val; inputs],
+            attrs: [/*name: StringAttr(StringAttr)*/],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
 
+        SeqHlmem: {
+            defs: [handle],
+            uses: [clk, reset],
+            attrs: [],
+            constraints: [/* TODO: fill this */],
+            regions: [],
+        },
+
+        SeqRead: {
+            defs: [rdata],
+            uses: [mem, renable; address],
+            attrs: [latency: UIntAttr(UIntAttr)],
+            constraints: [],
+            regions: [],
+        },
+
+        SeqWrite: {
+            defs: [],
+            uses: [mem, wenable, wdata; address],
+            attrs: [latency: UIntAttr(UIntAttr)],
+            constraints: [],
+            regions: [],
+        },
         
     }
 }

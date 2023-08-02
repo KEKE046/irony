@@ -1,12 +1,12 @@
 use irony::{self, preclude::*};
 
 
-irony::data_type_enum![DataTypeEnum = UInt(usize)];
+irony::data_type_enum![DataTypeEnum = { UInt(usize) }];
 
 pub type ConstValue=irony::ConstValueI32<DataTypeEnum>;
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
-    AttributeEnum = ConstValue(ConstValue)
+    AttributeEnum = { ConstValue(ConstValue) } 
 }
 
 type SameType = irony::SameTypeConstraint<DataTypeEnum, AttributeEnum>;

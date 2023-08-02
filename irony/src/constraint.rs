@@ -108,7 +108,8 @@ macro_rules! constraint_def {
     (
         [data_type = $dtype:ty, attr = $attr:ty] 
         $name:ident = {
-            $($variant:ident($variant_ty:ident$(,$($tt:tt)*)?),)*
+            $($variant:ident($variant_ty:ident$(,$($tt:tt)*)?)),*
+            $(,)?
         }
     ) => {
         #[derive(Clone, Debug, PartialEq)]

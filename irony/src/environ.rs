@@ -34,7 +34,6 @@ pub trait Environ: Sized {
         let uses = op.get_uses();
         let defs = op.get_defs();
         let regions = op.get_regions();
-        println!("Verifying op: {:#?}", op);
         let all_true = constraints.into_iter().all(|constraint| {
             constraint.verify(
                 self,
@@ -44,8 +43,6 @@ pub trait Environ: Sized {
                 regions.to_owned(),
             )
         });
-
-        println!("all_true is {}", all_true);
         all_true
     }
 }
