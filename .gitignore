@@ -1,5 +1,5 @@
 /target
 .metals
 .vscode
-irony_macros
 _*.rs
+irony_macros/*
