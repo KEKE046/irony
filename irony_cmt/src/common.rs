@@ -138,6 +138,12 @@ impl AttributeTrait for UIntAttr {
     type DataTypeT = DataTypeEnum;
 }
 
+impl Into<UIntAttr> for u32 {
+    fn into(self) -> UIntAttr {
+        UIntAttr(self)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeAttr(pub DataTypeEnum);
 impl AttributeTrait for TypeAttr {

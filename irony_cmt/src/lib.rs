@@ -15,7 +15,7 @@ irony::entity_def! {
 
     EntityEnum = {
         Wire: [name: StringAttr(StringAttr)],
-        Module: [name: StringAttr(StringAttr)]
+        Module: [name: StringAttr(StringAttr), top: UIntAttr(UIntAttr)],
     }
 }
 
