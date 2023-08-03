@@ -153,7 +153,16 @@ impl AttributeTrait for TypeAttr {
     type DataTypeT = DataTypeEnum;
 }
 
-pub type ConstAttr = irony::ConstValueI32<DataTypeEnum>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConstantAttr(pub Vec<bool>);
+impl AttributeTrait for ConstantAttr {
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+    type DataTypeT = DataTypeEnum;
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
@@ -192,7 +201,7 @@ irony::data_type_enum![
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
     AttributeEnum = {
-        ConstAttr(ConstAttr), 
+        ConstaintAttr(ConstantAttr),
         UIntAttr(UIntAttr), 
         StringAttr(StringAttr), 
         TypeAttr(TypeAttr), 

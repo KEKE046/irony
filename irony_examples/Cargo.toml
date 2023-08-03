@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 
 irony = { path = "../irony"}
+indexmap = "2.0.0"

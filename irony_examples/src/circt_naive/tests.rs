@@ -16,7 +16,7 @@ mod basics {
             let constant = env.add_op(
                 Constant::new(
                     Some(wire0),
-                    Some(ConstValueI32::<DataTypeEnum> {
+                    Some(ConstValueU32::<DataTypeEnum> {
                         value: 1,
                         dtype: DataTypeEnum::UInt(8),
                     }.into()),

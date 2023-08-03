@@ -3,7 +3,7 @@ use irony::{self, preclude::*};
 
 irony::data_type_enum![DataTypeEnum = { UInt(usize), None}];
 
-pub type ConstValue=irony::ConstValueI32<DataTypeEnum>;
+pub type ConstValue=irony::ConstValueU32<DataTypeEnum>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StringAttr(pub String);

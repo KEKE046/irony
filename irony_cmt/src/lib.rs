@@ -7,6 +7,7 @@ mod common;
 mod constraints;
 pub use common::*;
 pub use constraints::*;
+pub use indexmap;
 
 mod utils;
 
@@ -69,7 +70,7 @@ irony::op_def! {
         HwConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [value: ConstAttr(ConstAttr)],
+            attrs: [value: ConstantAttr(ConstantAttr)],
             constraints: [SameType::new().into()],
             regions: [],
         },

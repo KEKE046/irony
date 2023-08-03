@@ -30,13 +30,14 @@ pub trait AttributeTrait: Clone {
 }
 
 
+
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ConstValueI32<D:Clone> {
-    pub value: i32,
+pub struct ConstValueU32<D:Clone> {
+    pub value: u32,
     pub dtype: D,
 }
 
-impl<D:Clone> AttributeTrait for ConstValueI32<D> {
+impl<D:Clone> AttributeTrait for ConstValueU32<D> {
     type DataTypeT = D;
     fn dtype(&self) -> D {
         self.dtype.to_owned()

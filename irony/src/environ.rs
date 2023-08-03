@@ -16,7 +16,11 @@ pub trait Environ: Sized {
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
     fn get_entity(&self, id: EntityId) -> &Self::EntityT;
     fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
+    fn get_entity_entry(&mut self , entity_id: EntityId) -> indexmap::map::Entry<usize, Self::EntityT>;
+
     fn get_op(&self, id: OpId) -> &Self::OpT;
+    fn get_op_entry(&mut self , op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
+
     fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
     fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
     fn get_region(&self, id: RegionId) -> &Region;
@@ -152,6 +156,16 @@ macro_rules! environ_def {
                 .collect()
             }
 
+            fn get_entity_entry(&mut self , entity_id: irony::EntityId) -> indexmap::map::Entry<usize, Self::EntityT> {
+                // match self.entity_table.entry(entity_id) {
+                //     indexmap::map::Entry::Occupied(entry) => entry.into_mut(),
+                //     indexmap::map::Entry::Vacant(entry) =>  {
+                //         panic!("get entity not in the table by id \ntable: {:#?}\nentity-id: {:#?}",self.entity_table.get_map(), entity_id.id())
+                //     }
+                // }
+                self.entity_table.entry(entity_id.id())
+            }
+
             fn get_op(&self, id: irony::OpId) -> &Self::OpT {
                 match self.op_table.get(&id.id()) {
                     Some(op) =>op,
@@ -162,6 +176,11 @@ macro_rules! environ_def {
                     ),
                 }
             }
+            
+            fn get_op_entry(&mut self, op_id: irony::OpId) -> indexmap::map::Entry<usize, Self::OpT> {
+                self.op_table.entry(op_id.id())
+            }
+
             fn get_ops(&self, ids: &[irony::OpId]) -> Vec<&Self::OpT> {
                 ids.iter()
                 .map(|id| self.get_op(id.to_owned()))
