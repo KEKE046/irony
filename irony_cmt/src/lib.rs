@@ -16,7 +16,7 @@ irony::entity_def! {
 
     EntityEnum = {
         Wire: [name: StringAttr(StringAttr)],
-        Module: [name: StringAttr(StringAttr), top: UIntAttr(UIntAttr)],
+        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr)],
     }
 }
 
@@ -25,8 +25,16 @@ irony::op_def! {
 
     OpEnum = {
         // ------ BEGIN: define the operations in `hw` dialect -------
-
-
+        Assign: {
+            defs: [lhs],
+            uses: [rhs],
+            attrs: [invalid: BoolAttr(BoolAttr)],   // TODO: This should be marked at pass manager rather than the operation itself
+            constraints: [SameType::new().into()],
+            regions: [],
+        },
+        // ------ END: define the operations in `hw` dialect -------
+        
+        // ------ BEGIN: define the operations in `hw` dialect -------
         HwModule: {
             defs: [lhs],
             uses: [],

@@ -5,7 +5,7 @@ mod hw_test {
     #[test]
     pub fn module_constraint_test() {
         let mut circt = CmtEnv::default();
-        let module = circt.add_entity(Module::new(None, Some("top".into()), Some(1.into())).into());
+        let module = circt.add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
         let module_body = circt.add_region(Region::default());
         let module_def = circt.add_op(
             HwModule::new(
@@ -63,7 +63,7 @@ mod hw_test {
 
         assert!(circt.verify_op(module_pass_def));
 
-        let module = circt.add_entity(Module::new(None, Some("top".into()), Some(1.into())).into());
+        let module = circt.add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
         let module_body = circt.add_region(Region::default());
         circt.add_op(
             HwModule::new(

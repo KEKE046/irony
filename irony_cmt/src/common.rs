@@ -130,6 +130,22 @@ impl Into<StringAttr> for &str {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct BoolAttr(pub bool);
+impl AttributeTrait for BoolAttr {
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+    type DataTypeT = DataTypeEnum;
+}
+
+impl Into<BoolAttr> for bool {
+    fn into(self) -> BoolAttr {
+        BoolAttr(self)
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct UIntAttr(pub u32);
 impl AttributeTrait for UIntAttr {
     fn dtype(&self) -> DataTypeEnum {
@@ -202,6 +218,7 @@ irony::attribute_enum! {
     [data_type = DataTypeEnum]
     AttributeEnum = {
         ConstaintAttr(ConstantAttr),
+        BoolAttr(BoolAttr),
         UIntAttr(UIntAttr), 
         StringAttr(StringAttr), 
         TypeAttr(TypeAttr), 
