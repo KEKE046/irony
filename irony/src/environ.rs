@@ -12,7 +12,7 @@ pub trait Environ: Sized {
     type EntityT: Entity<DataTypeT = Self::DataTypeT>;
     type ConstraintT: ConstraintTrait<AttributeT = Self::AttributeT, DataTypeT = Self::DataTypeT>;
 
-    fn get_def(&self, id: EntityId) -> Option<OpId>;
+    fn get_defs(&self, id: EntityId) -> Vec<OpId>;
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
     fn get_entity(&self, id: EntityId) -> &Self::EntityT;
     fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
@@ -122,11 +122,12 @@ macro_rules! environ_def {
 
             type AttributeT = $attr_ty;
 
-            fn get_def(&self, entity: irony::EntityId) -> Option<irony::OpId> {
+            fn get_defs(&self, entity: irony::EntityId) -> Vec<irony::OpId> {
                 self.op_table
                 .iter()
-                .find(|tuple| tuple.1.defs(entity))
+                .filter(|tuple| tuple.1.defs(entity))
                 .map(|tuple| irony::OpId::from(*tuple.0))
+                .collect()
             }
 
             fn get_uses(&self, entity: irony::EntityId) -> Vec<irony::OpId> {

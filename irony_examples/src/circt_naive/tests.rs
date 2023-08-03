@@ -26,15 +26,15 @@ mod basics {
             let assign = env.add_op(Assign::new(Some(wire1), Some(wire0)).into());
 
             assert_eq!(wire0.get(env).get_uses(env), vec![assign]);
-            assert_eq!(env.get_entity(wire0).get_def(env), Some(constant));
+            assert_eq!(env.get_entity(wire0).get_defs(env), vec![constant]);
 
             assert_eq!(env.get_entity(wire1).get_uses(env), vec![]);
-            assert_eq!(env.get_entity(wire1).get_def(env), Some(assign));
+            assert_eq!(env.get_entity(wire1).get_defs(env), vec![assign]);
 
             assert_eq!(env.get_entity(wire1).get_parent(), Some(region));
         });
 
-        assert_eq!(env.get_entity(module).get_def(&env), Some(module_def));
+        assert_eq!(env.get_entity(module).get_defs(&env), vec![module_def]);
         assert_eq!(env.get_op(module_def).get_regions(), vec![(format!("{}", "region"), region)]);
         assert_eq!(env.get_region(region).get_use(&env), Some(module_def));
 

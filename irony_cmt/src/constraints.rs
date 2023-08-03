@@ -31,7 +31,8 @@ irony::constraint_def! {
             };
             
             let target = env.get_entity(EntityId(target_id.0 as usize));
-            let target_def = target.get_def(env).unwrap();
+            assert!(target.get_defs(env).len() == 1);
+            let target_def = target.get_defs(env)[0];
             let (_, target_region) = env.get_op(target_def).get_regions()[0];
 
             super::utils::extract_input_types(env, target_region) == super::utils::extract_types(env, uses[0].1.to_owned())

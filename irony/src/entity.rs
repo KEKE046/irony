@@ -10,7 +10,7 @@ pub trait Entity: Id {
     type AttributeT : AttributeTrait<DataTypeT = Self::DataTypeT>;
     fn get_dtype(&self) -> Option<Self::DataTypeT>;
 
-    fn get_def<E: Environ>(&self, env: &E) -> Option<OpId>;
+    fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;
     fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
     fn as_id(&self) -> EntityId;
     fn get_parent(&self) -> Option<RegionId>;
@@ -144,8 +144,8 @@ macro_rules! entity_def_one {
             type DataTypeT = $data_type;
             type AttributeT = $attr_ty;
 
-            fn get_def<E: irony::Environ>(&self, env: &E) -> Option<irony::OpId> {
-                env.get_def(self.as_id())
+            fn get_defs<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
+                env.get_defs(self.as_id())
             }
 
             fn get_uses<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
@@ -216,9 +216,9 @@ macro_rules! entity_enum {
             type DataTypeT = $dtype;
             type AttributeT = $attr_ty;
 
-            fn get_def<E: irony::Environ>(&self, env: &E) -> Option<irony::OpId> {
+            fn get_defs<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
                 match self {
-                    $($name::$variant(inner) => inner.get_def(env),)*
+                    $($name::$variant(inner) => inner.get_defs(env),)*
                 }
             }
 
