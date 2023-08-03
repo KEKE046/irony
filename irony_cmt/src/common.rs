@@ -123,6 +123,12 @@ impl AttributeTrait for StringAttr {
     type DataTypeT = DataTypeEnum;
 }
 
+impl Into<StringAttr> for &str {
+    fn into(self) -> StringAttr {
+        StringAttr(self.to_string())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct UIntAttr(pub u32);
 impl AttributeTrait for UIntAttr {
@@ -158,6 +164,11 @@ impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
     }
 }
 
+impl Into<ArrayAttr> for () {
+    fn into(self) -> ArrayAttr {
+        ArrayAttr(Vec::<AttributeEnum>::new())
+    }
+}
 #[derive(Clone, Debug, PartialEq)]
 pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
 

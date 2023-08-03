@@ -11,11 +11,11 @@ pub use constraints::*;
 mod utils;
 
 irony::entity_def! {
-    [data_type = DataTypeEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum]
 
     EntityEnum = {
-        Wire: (store_data=true),
-        Module
+        Wire: [name: StringAttr(StringAttr)],
+        Module: [name: StringAttr(StringAttr)]
     }
 }
 
@@ -246,7 +246,7 @@ irony::op_def! {
 
 irony::environ_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
-    struct CirctEnv;
+    struct CmtEnv;
 }
 
 #[cfg(test)]

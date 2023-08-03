@@ -100,12 +100,12 @@ macro_rules! op_def_one {
         pub struct $name  {
             id: usize,
             op_name: String,
-            $($def: irony::EntityId,)*
+            $($def: Option<irony::EntityId>,)*
             $($($variadic_def: Vec<irony::EntityId>,)*)?
-            $($use: irony::EntityId,)*
+            $($use:Option<irony::EntityId>,)*
             $($($variadic_use: Vec<irony::EntityId>,)*)?
-            $($attr: $attr_inner_ty,)*
-            $($region: irony::RegionId,)*
+            $($attr: Option<$attr_inner_ty>,)*
+            $($region: Option<irony::RegionId>,)*
             constraints: Vec<$constraint_ty>,
             parent: Option<irony::RegionId>,
         }
@@ -127,14 +127,14 @@ macro_rules! op_def_one {
 
             fn get_defs(&self) -> Vec<(String, Vec<irony::EntityId>)> {
                 vec![
-                    $((format!("{}", stringify!($def)), vec![self.$def])),*
+                    $((format!("{}", stringify!($def)), vec![self.$def.unwrap()])),*
                     $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned()))*)?
                 ]
             }
 
             fn get_uses(&self) -> Vec<(String, Vec<irony::EntityId>)> {
                 vec![
-                    $((format!("{}", stringify!($use)), vec![self.$use]),)*
+                    $((format!("{}", stringify!($use)), vec![self.$use.unwrap()]),)*
                     $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned()))*)?
                 ]
 
@@ -142,7 +142,7 @@ macro_rules! op_def_one {
 
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 vec![
-                    $((format!("{}", stringify!($attr)), self.$attr.to_owned().into())),*
+                    $((format!("{}", stringify!($attr)), self.$attr.to_owned().unwrap().into())),*
                 ]
             }
 
@@ -168,7 +168,7 @@ macro_rules! op_def_one {
 
             fn get_regions(&self) -> Vec<(String, irony::RegionId)> {
                 vec![
-                    $((format!("{}", stringify!($region)), self.$region)),*
+                    $((format!("{}", stringify!($region)), self.$region.unwrap())),*
                 ]
             }
 
@@ -184,12 +184,12 @@ macro_rules! op_def_one {
 
         impl $name {
             pub fn new(
-                $($def: irony::EntityId,)*
+                $($def: Option<irony::EntityId>,)*
                 $($($variadic_def: Vec<irony::EntityId>,)*)?
-                $($use: irony::EntityId,)*
+                $($use: Option<irony::EntityId>,)*
                 $($($variadic_use: Vec<irony::EntityId>,)*)?
-                $($attr: $attr_inner_ty,)*
-                $($region: irony::RegionId,)*
+                $($attr: Option<$attr_inner_ty>,)*
+                $($region: Option<irony::RegionId>,)*
             ) -> Self {
 
                 Self {

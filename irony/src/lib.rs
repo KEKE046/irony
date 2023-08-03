@@ -15,5 +15,5 @@ pub use operation::*;
 pub use hash::*;
 
 pub mod preclude {
-    pub use super::{Id, Op, Entity, Environ, utils};
+    pub use super::{Id, Op, Entity, Environ, utils, AttributeTrait, ConstraintTrait};
 }

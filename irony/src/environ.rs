@@ -25,6 +25,8 @@ pub trait Environ: Sized {
     fn set_entity_parent(&mut self, id: EntityId);
     fn set_op_parent(&mut self, id: OpId);
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
+    fn begin_region(&mut self, region: RegionId);
+    fn end_region(&mut self);
 
     fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F);
     fn verify_op(&self, op: OpId) -> bool {
@@ -217,14 +219,21 @@ macro_rules! environ_def {
             }
 
             fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
-                self.parent_stack.push(parent);
+                self.begin_region(parent);
                 f(self);
-                self.parent_stack.pop();
+                self.end_region();
             }
 
             fn get_region_use(&self, region: irony::RegionId) -> Option<irony::OpId> {
                 self.op_table.iter().find(|tuple| tuple.1.use_region(region))
                 .map(|tuple| irony::OpId::from(*tuple.0))
+            }
+
+            fn begin_region(&mut self, region: irony::RegionId) {
+                self.parent_stack.push(region);
+            }
+            fn end_region(&mut self) {
+                self.parent_stack.pop();
             }
         }
 

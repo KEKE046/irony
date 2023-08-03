@@ -1,12 +1,28 @@
 use irony::{self, preclude::*};
 
 
-irony::data_type_enum![DataTypeEnum = { UInt(usize) }];
+irony::data_type_enum![DataTypeEnum = { UInt(usize), None}];
 
 pub type ConstValue=irony::ConstValueI32<DataTypeEnum>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StringAttr(pub String);
+impl AttributeTrait for StringAttr {
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+    type DataTypeT = DataTypeEnum;
+}
+
+impl Into<StringAttr> for &str {
+    fn into(self) -> StringAttr {
+        StringAttr(self.to_string())
+    }
+}
+
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
-    AttributeEnum = { ConstValue(ConstValue) } 
+    AttributeEnum = { ConstValue(ConstValue), StringAttr(StringAttr)} 
 }
 
 type SameType = irony::SameTypeConstraint<DataTypeEnum, AttributeEnum>;
@@ -18,11 +34,11 @@ irony::constraint_def! {
 }
 
 irony::entity_def! {
-    [data_type = DataTypeEnum]
+    [data_type = DataTypeEnum, attr=AttributeEnum]
 
     EntityEnum = {
-        Wire: (store_data=true),
-        Module
+        Wire: [name: StringAttr(StringAttr)],
+        Module: [name: StringAttr(StringAttr)],
     }
 }
 
