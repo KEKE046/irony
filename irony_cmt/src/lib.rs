@@ -1,6 +1,6 @@
 #[allow(unused_variables)]
 
-use irony::{self, preclude::*};
+pub use irony::{self, preclude::*};
 
 /// define types and attributes
 mod common;
@@ -170,6 +170,13 @@ irony::op_def! {
             defs: [lhs],
             uses: [op0, op1],
             attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)],
+            constraints: [SameType::new().into()],
+            regions: [],
+        },
+        CombUnary: {
+            defs: [lhs],
+            uses: [op],
+            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
             constraints: [SameType::new().into()],
             regions: [],
         },

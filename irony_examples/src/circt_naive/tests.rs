@@ -1,6 +1,5 @@
 mod basics {
     use crate::circt_naive::*;
-    use irony::*;
 
     #[test]
     fn build() -> Result<(),()> {

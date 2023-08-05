@@ -51,6 +51,8 @@ pub trait Environ: Sized {
         });
         all_true
     }
+
+    fn dump(&self) -> String;
 }
 
 #[macro_export]
@@ -254,6 +256,10 @@ macro_rules! environ_def {
             }
             fn end_region(&mut self) {
                 self.parent_stack.pop();
+            }
+
+            fn dump(&self) -> String {
+                format!("entity table: {:#?}\nregion table: {:#?}\nop table: {:#?}", self.entity_table.get_map(), self.region_table.get_map(), self.op_table.get_map())
             }
         }
 

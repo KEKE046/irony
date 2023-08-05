@@ -37,6 +37,18 @@ impl CombVariadicPredicate {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum CombUnaryPredicate {
+    Not,
+    Neg, 
+}
+impl AttributeTrait for CombUnaryPredicate {
+    type DataTypeT = DataTypeEnum;
+    fn dtype(&self) -> DataTypeEnum {
+        DataTypeEnum::None
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum CombBinaryPredicate {
     DivU,
     DivS,
@@ -129,6 +141,12 @@ impl Into<StringAttr> for &str {
     }
 }
 
+impl Into<StringAttr> for String {
+    fn into(self) -> StringAttr {
+        StringAttr(self)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoolAttr(pub bool);
 impl AttributeTrait for BoolAttr {
@@ -157,6 +175,11 @@ impl AttributeTrait for UIntAttr {
 impl Into<UIntAttr> for u32 {
     fn into(self) -> UIntAttr {
         UIntAttr(self)
+    }
+}
+impl Into<UIntAttr> for usize {
+    fn into(self) -> UIntAttr {
+        UIntAttr(self as u32)
     }
 }
 
@@ -225,6 +248,7 @@ irony::attribute_enum! {
         ArrayAttr(ArrayAttr), 
         CombVariadicPredicate(CombVariadicPredicate), 
         CombBinaryPredicate(CombBinaryPredicate), 
+        CombUnaryPredicate(CombUnaryPredicate),
         CombICmpPredicate(CombICmpPredicate)
     }
 }
