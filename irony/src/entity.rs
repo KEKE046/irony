@@ -12,8 +12,9 @@ pub trait Entity: Id {
     fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
     fn as_id(&self) -> EntityId;
     fn get_parent(&self) -> Option<RegionId>;
-    fn set_parent(&mut self, parent: RegionId);
+    fn set_parent(&mut self, parent: Option<RegionId>);
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>); 
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -90,7 +91,7 @@ impl Region {
 
     pub fn add_op_child(&mut self, op: OpId) {
         if let Some(_) = self.op_children.iter().find(|&op_exist| op_exist.id() == op.id()) {
-            panic!("{} has already been in the op_children of {}", op.id(), self.id())
+            panic!("{} has already been in the op_children of {}\n", op.id(), self.id())
         } else {
             self.op_children.push(op)
         }
@@ -162,8 +163,8 @@ macro_rules! entity_def_one {
                 self.parent
             }
 
-            fn set_parent(&mut self, parent: irony::RegionId) {
-                self.parent = Some(parent)
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
+                self.parent = parent
             }
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 let mut attrs = vec![];
@@ -175,6 +176,16 @@ macro_rules! entity_def_one {
                     )*
                 )?
                 attrs
+            }
+
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
+                $(
+                    $(
+                        if let Some((name, attr)) = attrs.iter().find(|(name, _)| name == &String::from(stringify!($attr))) {
+                            self.$attr = Some(attr.to_owned().into())
+                        }
+                    )*
+                )?
             }
         }
 
@@ -244,7 +255,7 @@ macro_rules! entity_enum {
                 }
             }
 
-            fn set_parent(&mut self, parent: irony::RegionId) {
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
                 match self {
                     $($name::$variant(inner) => inner.set_parent(parent), )*
                 }
@@ -253,6 +264,11 @@ macro_rules! entity_enum {
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 match self {
                     $($name::$variant(inner) => inner.get_attrs(), )*
+                }
+            }
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
+                match self {
+                    $($name::$variant(inner) => inner.set_attrs(attrs), )*
                 }
             }
         }

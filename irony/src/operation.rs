@@ -7,6 +7,7 @@ use super::entity::EntityId;
 use crate::printer::OpPrinterTrait;
 use crate::{ConstraintTrait, RegionId};
 
+
 pub trait Op: Id + Debug {
     type DataTypeT;
     type AttributeT;
@@ -17,13 +18,14 @@ pub trait Op: Id + Debug {
     fn get_uses(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
 
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> ();
     fn get_constraints(&self) -> Vec<Self::ConstraintT>;
 
     fn uses(&self, entity: EntityId) -> bool;
     fn defs(&self, entity: EntityId) -> bool;
 
     fn get_parent(&self) -> Option<RegionId>;
-    fn set_parent(&mut self, parent: RegionId);
+    fn set_parent(&mut self, parent: Option<RegionId>);
 
     fn get_regions(&self) -> Vec<(String, RegionId)>;
 
@@ -104,6 +106,7 @@ macro_rules! op_def_one {
             print: ($($print_tt:tt)*)$(,)?
         }
     ) => {
+        #[StructFields(pub)]
         #[derive(PartialEq, Debug)]
         pub struct $name  {
             id: usize,
@@ -157,6 +160,14 @@ macro_rules! op_def_one {
                 ]
             }
 
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) ->() {
+                $(
+                    $(
+                        self.$attr = attrs.iter().find(|(k, _)| k == &format!("{}", stringify!($attr))).map(|(_, v)| v.clone().into());
+                    )*
+                )?
+            }
+
             fn get_constraints(&self) -> Vec<Self::ConstraintT> {
                 self.constraints.clone()
             }
@@ -185,8 +196,8 @@ macro_rules! op_def_one {
             fn get_parent(&self) -> Option<irony::RegionId> {
                 self.parent
             }
-            fn set_parent(&mut self, parent: irony::RegionId) {
-                self.parent = Some(parent)
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
+                self.parent = parent;
             }
 
             fn get_regions(&self) -> Vec<(String, irony::RegionId)> {
@@ -318,8 +329,14 @@ macro_rules! op_enum {
                 match self {
                     $($name::$variant(inner) => inner.get_attrs()),*
                 }
-
             }
+
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
+                match self {
+                    $($name::$variant(inner) => inner.set_attrs(attrs)),*
+                }
+            }
+            
             fn get_constraints(&self) -> Vec<Self::ConstraintT> {
                 match self {
                     $($name::$variant(inner) => inner.get_constraints()),*
@@ -343,7 +360,7 @@ macro_rules! op_enum {
                     $($name::$variant(inner) => inner.get_parent()),*
                 }
             }
-            fn set_parent(&mut self, parent: irony::RegionId) {
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
                 match self {
                     $($name::$variant(inner) => inner.set_parent(parent)),*
                 }

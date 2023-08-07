@@ -4,8 +4,12 @@ pub use irony::{self, preclude::*};
 /// define types and attributes
 mod common;
 mod constraints;
+mod passes;
+
 pub use common::*;
 pub use constraints::*;
+pub use passes::*;
+
 pub use indexmap;
 
 mod utils;
@@ -462,7 +466,7 @@ irony::op_def! {
 }
 
 irony::environ_def! {
-    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum, pm = PassManager]
     struct CmtEnv;
 }
 

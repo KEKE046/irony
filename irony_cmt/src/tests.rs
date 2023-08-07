@@ -1,5 +1,7 @@
 mod hw_test {
-    use irony::{Environ, Region, utils::print};
+    use std::vec;
+
+    use irony::{Environ, Region};
 
     use crate::*;
 
@@ -21,7 +23,7 @@ mod hw_test {
             .into(),
         );
 
-        cmt.with_region(module_pass_body, |cmt| {
+        cmt.with_region(Some(module_pass_body), |cmt| {
             let a = cmt.add_entity(Wire::new( Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into());
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
             cmt.add_op(HwInput::new(vec![a]).into());
@@ -45,7 +47,7 @@ mod hw_test {
             .into(),
         );
 
-        cmt.with_region(module_body, |cmt| {
+        cmt.with_region(Some(module_body), |cmt| {
             let clk = cmt.add_entity(Wire::new(Some(DataTypeEnum::UInt(1.into())), Some("clk".into())).into());
             let a = cmt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into());
             let b = cmt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into());
@@ -109,11 +111,29 @@ mod hw_test {
 
     #[test]
     pub fn print_test() {
-        let (cmt, _, module_def) = create();
-        cmt.verify_op(module_def);
-        println!("{}", cmt.print_op(module_def));
+        let (mut cmt, _, _) = create();
+        
+        let no_parent = cmt.op_table.iter().filter(|(_, op)| op.get_parent().is_none()).map(|(id, _)| OpId(*id)).collect::<Vec<_>>();
 
-        // println!("entities without parent: {:?}", cmt.get_entities_with_parent(None).iter().map(|x| cmt.get_entity(*x)).collect::<Vec<_>>());
+        for op in no_parent.iter() {
+            println!("{}", cmt.print_op(*op));
+        }
+
+        println!();
+        println!("run pass: RenamePass\n");
+
+ 
+        println!("no parent: {:?}", no_parent);
+
+        cmt.pass_manager.add_passes(vec![PassEnum::RenamePass(RenamePass)], vec![no_parent.to_owned()]);
+        
+        cmt.run_passes();
+
+        for op in no_parent.iter() {
+            println!("{}", cmt.print_op(*op));
+        }
+        
+
     }
 
     #[test]
@@ -138,7 +158,7 @@ mod hw_test {
             .into(),
         );
 
-        circt.with_region(module_body, |circt| {
+        circt.with_region(Some(module_body), |circt| {
             let a = circt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into());
             let b = circt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into());
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
@@ -168,7 +188,7 @@ mod hw_test {
             .into(),
         );
 
-        circt.with_region(module_pass_body, |circt| {
+        circt.with_region(Some(module_pass_body), |circt| {
             let a = circt.add_entity(Wire::new( Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into());
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
             circt.add_op(HwInput::new(vec![a]).into());
@@ -192,7 +212,7 @@ mod hw_test {
             .into(),
         );
 
-        circt.with_region(module_body, |circt| {
+        circt.with_region(Some(module_body), |circt| {
             let a = circt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into());
             let b = circt.add_entity(Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into());
 

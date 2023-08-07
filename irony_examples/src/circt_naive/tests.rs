@@ -8,7 +8,7 @@ mod basics {
         let region = env.add_region(Region::new().into());
         let module_def = env.add_op(ModuleDef::new(Some(module), Some(region)).into());
 
-        env.with_region(region, |env| {
+        env.with_region(Some(region), |env| {
 
             let wire0 = env.add_entity(Wire::new(Some(DataTypeEnum::UInt(8)), Some("w0".into())).into());
             let wire1 = env.add_entity(Wire::new(Some( DataTypeEnum::UInt(8)), Some("w1".into())).into());

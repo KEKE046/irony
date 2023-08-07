@@ -30,10 +30,10 @@ pub trait Environ: Sized {
     fn set_entity_parent(&mut self, id: EntityId);
     fn set_op_parent(&mut self, id: OpId);
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
-    fn begin_region(&mut self, region: RegionId);
+    fn begin_region(&mut self, region: Option<RegionId>);
     fn end_region(&mut self);
 
-    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F);
+    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: Option<RegionId>, f: F);
     fn verify_op(&self, op: OpId) -> bool {
         let op = self.get_op(op);
         let constraints = op.get_constraints();
@@ -86,12 +86,14 @@ pub trait Environ: Sized {
     }
 
     fn dump(&self) -> String;
+    
+    fn run_passes(&mut self); // -> ???
 }
 
 #[macro_export]
 macro_rules! environ_def {
     (
-        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty, pm = $pm_ty:ty]
         struct $name:ident;
     ) => {
         irony::environ_def! {
@@ -101,13 +103,14 @@ macro_rules! environ_def {
             OP: $op_ty;
             ATTR: $attr_ty;
             CONSTRAINT: $constraint_ty;
+            PASSMANAGER: $pm_ty;
             NAME: $name;
             FIELDS: ;
         }
     };
 
     (
-        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty, pm = $pm_ty:ty]
         struct $name:ident {
             $(
                 $field_vis:vis $field_name:ident : $field_ty:ty
@@ -121,6 +124,7 @@ macro_rules! environ_def {
             OP: $op_ty;
             ATTR: $attr_ty;
             CONSTRAINT: $constraint_ty;
+            PASSMANAGER: $pm_ty;
             NAME: $name;
             FIELDS: $($field_vis $field_name : $field_ty)*;
         }
@@ -132,16 +136,19 @@ macro_rules! environ_def {
         OP: $op_ty:ty;
         ATTR: $attr_ty:ty;
         CONSTRAINT: $constraint_ty:ty;
+        PASSMANAGER: $pm_ty:ty;
         NAME: $name:ident ;
         FIELDS: $($field_vis:vis $field_name:ident : $field_ty:ty)* ;
     ) => {
 
+        #[StructFields(pub)]
         #[derive(Default, Debug)]
         pub struct $name {
             op_table: irony::FxMapWithUniqueId<$op_ty>,
             entity_table: irony::FxMapWithUniqueId<$entity_ty>,
             region_table: irony::FxMapWithUniqueId<irony::Region>,
-            parent_stack: Vec<irony::RegionId>,
+            parent_stack: Vec<Option<irony::RegionId>>,
+            pass_manager: $pm_ty,
 
             $($field_vis $field_name: $field_ty,)*
         }
@@ -261,29 +268,33 @@ macro_rules! environ_def {
                 irony::OpId(id)
             }
 
-            fn set_entity_parent(&mut self, id: irony::EntityId) {
+            fn set_entity_parent(&mut self, entity: irony::EntityId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.entity_table
-                        .entry(id.id())
+                        .entry(entity.id())
                         .and_modify(|entity| entity.set_parent(parent.to_owned()));
-                    self.region_table.entry(parent.id()).and_modify(|region|
-                        region.add_entity_child(irony::EntityId(id.id()))
-                    );
+                    if let Some(parent) = parent {
+                        self.region_table.entry(parent.id()).and_modify(|region|
+                            region.add_entity_child(irony::EntityId(entity.id()))
+                        );
+                    }
                 }
             }
 
-            fn set_op_parent(&mut self, id: irony::OpId) {
+            fn set_op_parent(&mut self, op: irony::OpId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.op_table
-                        .entry(id.id())
-                        .and_modify(|entity| entity.set_parent(parent.to_owned()));
-                    self.region_table.entry(parent.id()).and_modify(|region|
-                        region.add_op_child(irony::OpId(id.id()))
-                    );
+                        .entry(op.id())
+                        .and_modify(|op| op.set_parent(parent.to_owned()));
+                    if let Some(parent) = parent {
+                        self.region_table.entry(parent.id()).and_modify(|region|
+                            region.add_op_child(irony::OpId(op.id()))
+                        );
+                    }
                 }
             }
 
-            fn with_region<F: Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
+            fn with_region<F: Fn(&mut Self) -> ()>(&mut self, parent: Option<irony::RegionId>, f: F) {
                 self.begin_region(parent);
                 f(self);
                 self.end_region();
@@ -294,7 +305,7 @@ macro_rules! environ_def {
                 .map(|tuple| irony::OpId::from(*tuple.0))
             }
 
-            fn begin_region(&mut self, region: irony::RegionId) {
+            fn begin_region(&mut self, region: Option<irony::RegionId>) {
                 self.parent_stack.push(region);
             }
             fn end_region(&mut self) {
@@ -303,6 +314,11 @@ macro_rules! environ_def {
 
             fn dump(&self) -> String {
                 format!("entity table: {:#?}\nregion table: {:#?}\nop table: {:#?}", self.entity_table.get_map(), self.region_table.get_map(), self.op_table.get_map())
+            }
+
+            fn run_passes(&mut self) {
+                let pass_manager = self.pass_manager.clone();
+                pass_manager.run_passes(self);
             }
         }
 

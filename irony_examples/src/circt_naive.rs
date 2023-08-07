@@ -77,9 +77,45 @@ irony::op_def! {
         },
     }
 }
+#[derive(Clone)]
+pub struct PassPH;
+impl PassTrait<(), ()> for PassPH {
+    type EntityT = EntityEnum;
+
+    type OpT = EntityEnum;
+
+    fn check_op<E>(&self, _env:&E, _op: OpId) -> bool
+    where E: Environ<EntityT=Self::EntityT, OpT=Self::OpT> {
+        todo!()
+    }
+
+    fn run_raw<E>(&self, _env: &mut E, _op: OpId) -> Result<(), ()>
+    where E: Environ<EntityT=Self::EntityT, OpT=Self::OpT> {
+        todo!()
+    }
+}
+#[derive(Debug, Default, Clone)]
+pub struct PassManager;
+
+impl PassManagerTrait<(), ()> for PassManager {
+    type EntityT=EntityEnum;
+
+    type OpT=OpEnum;
+
+    type PassT = PassPH;
+
+    fn add_passes(&mut self, _passes: Vec<Self::PassT>, _start_ops: Vec<Vec<OpId>>) {
+        todo!()
+    }
+
+    fn run_passes<E>(&self, _env: &mut E) -> Result<(), ()>
+    where E: Environ<EntityT=Self::EntityT, OpT=Self::OpT>  {
+        todo!()
+    }
+}
 
 irony::environ_def! {
-    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
+    [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum, pm = PassManager]
     struct CirctEnv;
 }
 

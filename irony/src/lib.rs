@@ -27,3 +27,6 @@ pub mod preclude {
 }
 
 pub use indexmap;
+
+
+pub use visible::StructFields;

@@ -74,6 +74,15 @@ macro_rules! attribute_enum {
                     $name::$variant(self.to_owned())
                 }
             }
+
+            impl Into<$variant_ty> for $name {
+                fn into(self) -> $variant_ty {
+                    match self {
+                        $name::$variant(x) => x,
+                        _ => panic!("cannot convert {:?} into {:?}", stringify!($name), stringify!($variant_ty)),
+                    }
+                }
+            }
         )*
 
         impl std::fmt::Display for $name {
