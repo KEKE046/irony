@@ -16,6 +16,7 @@ pub trait Environ: Sized {
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
     fn get_entity(&self, id: EntityId) -> &Self::EntityT;
     fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
+    fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
     fn get_entity_entry(&mut self , entity_id: EntityId) -> indexmap::map::Entry<usize, Self::EntityT>;
 
     fn get_op(&self, id: OpId) -> &Self::OpT;
@@ -189,6 +190,16 @@ macro_rules! environ_def {
                 ids.iter()
                 .map(|id| self.get_entity(id.to_owned()))
                 .collect()
+            }
+
+            fn get_entities_with_parent(&self, parent: Option<RegionId>) -> Vec<EntityId> {
+                self.entity_table.iter().filter_map(|(id, entity)| {
+                    if entity.get_parent() == parent {
+                        Some(EntityId(*id))
+                    } else {
+                        None
+                    }
+                }).collect()
             }
 
             fn get_entity_entry(&mut self , entity_id: irony::EntityId) -> indexmap::map::Entry<usize, Self::EntityT> {

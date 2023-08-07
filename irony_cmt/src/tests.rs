@@ -1,5 +1,5 @@
 mod hw_test {
-    use irony::{Environ, Region};
+    use irony::{Environ, Region, utils::print};
 
     use crate::*;
 
@@ -112,6 +112,8 @@ mod hw_test {
         let (cmt, _, module_def) = create();
         cmt.verify_op(module_def);
         println!("{}", cmt.print_op(module_def));
+
+        // println!("entities without parent: {:?}", cmt.get_entities_with_parent(None).iter().map(|x| cmt.get_entity(*x)).collect::<Vec<_>>());
     }
 
     #[test]
