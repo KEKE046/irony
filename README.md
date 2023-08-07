@@ -14,12 +14,12 @@
 | Environ     | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
 | Print       | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
 | Parse       | :white_large_square: | :white_large_square: | :white_large_square:  |
-| Pass        | :white_large_square: | :white_large_square: | :white_large_square:  |
+| Pass        | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
 | Interpret   | :white_large_square: | :white_large_square: | :white_large_square:  |
 
 #### Planned Features
 
-- [ ] Pass and Pass Manager;
+- [ ] Pass and Pass Manager with more powerful features;
 - [ ] Use [laps](https://github.com/uv-xiao/laps) for Parse and Print;
 - [ ] Logging system;
 - [ ] Query analysis system, refer to [MLIR PM](https://mlir.llvm.org/docs/PassManagement/#querying-analyses);
