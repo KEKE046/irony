@@ -1,5 +1,4 @@
 use irony::preclude::*;
-use irony::{self};
 
 irony::data_type_enum![DataTypeEnum = { UInt(usize)}];
 
@@ -41,47 +40,42 @@ irony::entity_def! {
 }
 
 irony::op_def! {
+
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
-        Constant:  {
+        Constant : {
             defs: [lhs],
             uses: [],
             attrs: [rhs: ConstValue(ConstValue)],
             constraints: [SameType::new().into()],
             print: (
-                |_, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    format!("{:?} = {:?}", defs[0].1, attrs[0].1)
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _attrs, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    format!("{} = {}", env.print_entity(defs[0].1[0].unwrap()), attrs[0].1)
                 }
             ),
-        },
-        Assign: {
-            defs: [lhs],
-            uses: [rhs],
-            constraints: [SameType::new().into()],
-            print: (
-                |_, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    format!("{:?} = {:?}", defs[0].1, uses[0].1)
-                }
-            )
-        },
-        ModuleDef: {
-            defs: [lhs],
-            uses: [],
-            regions: [region],
-            print: (
-                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, RegionId)>| {
-                    format!("module {:?} {{\n{}\n}}", defs[0].1, env.print_region(regions[0].1))
-                }
-            )
-        },
+        }
     }
 }
+
 
 irony::environ_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum]
     struct CirctEnv;
 }
 
-#[cfg(test)]
-mod tests;
+
+pub fn main() {
+    let mut env = CirctEnv::default();
+    let wire = env.add_entity(Wire::new(Some(DataTypeEnum::UInt(8)), Some("a".into())).into());
+    let constant = env.add_op(
+        Constant::new(
+            Some(wire),
+            Some(ConstValueU32::<DataTypeEnum> { value: 1, dtype: DataTypeEnum::UInt(8) }.into()),
+        )
+        .into(),
+    );
+
+    println!("{}", env.print_op(constant));
+
+}

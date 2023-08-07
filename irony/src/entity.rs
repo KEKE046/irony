@@ -1,13 +1,11 @@
 
-use crate::AttributeTrait;
-
 use super::common::Id;
 use super::environ::Environ;
 use super::operation::OpId;
 
 pub trait Entity: Id {
     type DataTypeT;
-    type AttributeT : AttributeTrait<DataTypeT = Self::DataTypeT>;
+    type AttributeT: Clone+PartialEq+std::fmt::Display;
     fn get_dtype(&self) -> Option<Self::DataTypeT>;
 
     fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;

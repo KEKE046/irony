@@ -1,5 +1,4 @@
 #[allow(unused_variables)]
-
 pub use irony::{self, preclude::*};
 
 /// define types and attributes
@@ -30,10 +29,14 @@ irony::op_def! {
             uses: [rhs],
             attrs: [invalid: BoolAttr(BoolAttr)],   // TODO: This should be marked at pass manager rather than the operation itself
             constraints: [SameType::new().into()],
-            regions: [],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs:Vec<(String, Vec<Option<EntityId>>)>, _ | {
+                    format!("{} = {}", env.print_entity(defs[0].1[0].unwrap()), env.print_entity(uses[0].1[0].unwrap()))
+                }
+            )
         },
         // ------ END: define the operations in `hw` dialect -------
-        
+
         // ------ BEGIN: define the operations in `hw` dialect -------
         HwModule: {
             defs: [lhs],
@@ -41,46 +44,119 @@ irony::op_def! {
             attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
             constraints: [ModuleConstraint::default().into()],
             regions: [body],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, RegionId)>| {
+                    let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&attrs, "arg_names").unwrap() else { panic!("")};
+                    let AttributeEnum::ArrayAttr(arg_types) = irony::utils::extract_vec(&attrs, "arg_types").unwrap() else { panic!("")};
+
+                    let AttributeEnum::ArrayAttr(output_names) = irony::utils::extract_vec(&attrs, "output_names").unwrap() else { panic!("")};
+                    let AttributeEnum::ArrayAttr(output_types) = irony::utils::extract_vec(&attrs, "output_types").unwrap() else { panic!("")};
+                    let name = irony::utils::extract_vec(&attrs, "name").unwrap();
+
+                    let args = arg_names.0.iter().zip(arg_types.0.iter()).map(|(name, ty)| {
+                        format!("%{}: {}", name, ty)
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let outputs = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
+                        format!("{}: {}", name, ty)
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("hw.module @{}({}) -> ({}) {}", name, args, outputs, env.print_region(regions[0].1))
+                }
+            )
         },
 
+        // TODO: Support EXT_W_PARAMS ?
         HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
             attrs: [target_id: UIntAttr(UIntAttr), instance_name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
-            regions: [], 
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let AttributeEnum::UIntAttr(target_id) = irony::utils::extract_vec(&attrs, "target_id").unwrap() else { panic!("")};
+                    let module_attrs = env.get_op(env.get_entity(EntityId(target_id.0 as usize)).get_defs(env)[0]).get_attrs();
+                    let AttributeEnum::StringAttr(instance_name) = irony::utils::extract_vec(&attrs, "instance_name").unwrap() else { panic!("")};
+
+                    let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&module_attrs, "arg_names").unwrap() else { panic!("")};
+                    let AttributeEnum::ArrayAttr(arg_types) = irony::utils::extract_vec(&module_attrs, "arg_types").unwrap() else { panic!("")};
+
+                    let AttributeEnum::ArrayAttr(output_names) = irony::utils::extract_vec(&module_attrs, "output_names").unwrap() else { panic!("")};
+                    let AttributeEnum::ArrayAttr(output_types) = irony::utils::extract_vec(&module_attrs, "output_types").unwrap() else { panic!("")};
+                    let AttributeEnum::StringAttr(mod_name) = irony::utils::extract_vec(&module_attrs, "name").unwrap() else { panic!("")};
+
+                    let outputs = defs[0].1.iter().map(|id| {
+                        env.print_entity((*id).unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let output_types = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
+                        format!("{}: {}", name, ty)
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let args = arg_names.0.iter().zip(uses[0].1.iter()).zip(arg_types.0.iter()).map(|((name, id), ty)| {
+                        format!("{} : {} : {}", name, env.print_entity((*id).unwrap()), ty)
+                    }).collect::<Vec<_>>().join(", ");
+
+                    format!("{} = hw.instance \"{}\" @{}({}) -> ({})", outputs, instance_name, mod_name, args, output_types)
+                }
+            )
         },
 
         HwInput: {
             defs: [; inputs],
             uses: [],
-            attrs: [],
-            constraints: [],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    format!("")
+                }
+            )
         },
 
         HwOutput: {
             defs: [],
             uses: [; outputs],
-            attrs: [],
             constraints:[],
-            regions: [],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let outputs = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let output_types = uses[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("hw.outputs {}: {}", outputs, output_types)
+                }
+            )
         },
 
         HwBitCast: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [],
-            constraints: [],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
+        // TODO: support super large constant and boolean constant
         HwConstant: {
             defs: [lhs],
             uses: [],
             attrs: [value: ConstantAttr(ConstantAttr)],
-            constraints: [SameType::new().into()],
-            regions: [],
+            constraints: [SameTypeConstant::default().into()],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let AttributeEnum::ConstantAttr(value) = irony::utils::extract_vec(&attrs, "value").unwrap() else { panic!("")};
+                    let value = irony::utils::arith::from_bits_to_u32(value.0);
+                    let names = defs[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let types = defs[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = hw.constant {}: {}", names, value, types)
+                }
+            )
         },
 
         HwAggregateConstant: {
@@ -88,71 +164,99 @@ irony::op_def! {
             uses: [],
             attrs: [attrs: ArrayAttr(ArrayAttr)],
             constraints: [SameTypeAggregate::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwArrayConcat: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [],
             constraints: [ArrayConcatConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwArrayCreate: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [],
             constraints: [ArrayCreateConstraint::default().into(), SameTypeOperands::new().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwArrayGet: {
             defs: [lhs],
             uses: [array, index],
-            attrs: [],
             constraints: [ArrayGetConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwArraySlice: {
             defs: [lhs],
             uses: [array, index],
-            attrs: [],
             constraints: [ArraySliceConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwStructCreate: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [],
             constraints: [StructCreateConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwStructExtract: {
             defs: [lhs],
             uses: [struct_input, field],
-            attrs: [],
             constraints: [StructExtractConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwStructInject: {
             defs: [lhs],
             uses: [struct_input, field, new_value],
-            attrs: [],
             constraints: [StructInjectConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         HwStructExplode: {
             defs: [; outputs],
             uses: [struct_input],
-            attrs: [],
             constraints: [StructExplodeConstraint::default().into()],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
 
         // ------ END: define the operations in `hw` dialect -------
@@ -164,99 +268,196 @@ irony::op_def! {
             uses: [; operands],
             attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)],
             constraints: [SameType::new().into()],
-            regions: [],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let uses = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let AttributeEnum::CombVariadicPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = comb.{} {} : {}", def, predicate, uses, typ)
+                }
+            )
         },
         CombBinary: {
             defs: [lhs],
             uses: [op0, op1],
             attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)],
             constraints: [SameType::new().into()],
-            regions: [],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let uses = vec![env.print_entity(uses[0].1[0].unwrap()), env.print_entity(uses[1].1[0].unwrap())].join(", ");
+                    let AttributeEnum::CombBinaryPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = comb.{} {} : {}", def, predicate, uses, typ)
+                }
+            )
         },
         CombUnary: {
             defs: [lhs],
             uses: [op],
             attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
             constraints: [SameType::new().into()],
-            regions: [],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let uses = vec![env.print_entity(uses[0].1[0].unwrap())].join(", ");
+                    let AttributeEnum::CombUnaryPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = ILLEGAL.{} {} : {}", def, predicate, uses, typ)
+                }
+            )
         },
         CombICmp: {
             defs: [lhs],
             uses: [op0, op1],
             attrs: [predicate: CombICmpPredicate(CombICmpPredicate)],
             constraints: [SameTypeOperands::new().into()],
-            regions: [],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String,Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let inputs = vec![env.print_entity(uses[0].1[0].unwrap()), env.print_entity(uses[1].1[0].unwrap())].join(", ");
+                    let AttributeEnum::CombICmpPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
+                    let typ = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = comb.icmp {} {} : {}", def, predicate, inputs, typ)
+                }
+            )
         },
         CombParity: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions:[],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
         CombExtract: {
             defs: [lhs],
             uses: [input, low],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
         CombConcat: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
         CombReplicate: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    unimplemented!()
+                }
+            )
         },
         CombMux2: {
             defs: [lhs],
             uses: [cond, op0, op1],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let uses = uses.iter().map(|(_, ids)| {
+                        format!("{}", env.print_entity(ids[0].unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = comb.mux {} : {}", def, uses, typ)
+                }
+            )
         },
         // ------ END: define the operations in `comb` dialect -------
-        
+
         // ------ BEGIN: define the operations in `seq` dialect -------
         SeqCompReg: {
-            defs: [; outputs],
-            uses: [clk,reset,reset_val; inputs],
+            defs: [output],
+            uses: [input, clk,reset,reset_val],
             attrs: [/*name: StringAttr(StringAttr)*/],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let output_name = env.print_entity(defs[0].1[0].unwrap());
+                    let input_name = match uses.iter().find(|(name, _)| name == "input").and_then(|(_, ids)| Some(env.print_entity(ids[0].unwrap()))) {
+                        Some(name) => name,
+                        None => format!(""),
+                    };
+                    let clk = match uses.iter().find(|(name, _)| name == "clk").and_then(|(_, ids)| Some(env.print_entity(ids[0].unwrap()))) {
+                        Some(name) => name,
+                        None => format!(""),
+                    };
+                    let reset = match uses.iter().find(|(name, _)| name == "reset").and_then(|(_, ids)| {
+                        if let Some(id) = ids[0] {
+                            Some(env.print_entity(id))
+                        } else {
+                            None
+                        }}) {
+                        Some(name) => name,
+                        None => format!(""),
+                    };
+                    let reset_val = match uses.iter().find(|(name, _)| name == "reset_val").and_then(|(_, ids)| {
+                        if let Some(id) = ids[0] {
+                            Some(env.print_entity(id))
+                        } else {
+                            None
+                        }}) {
+                        Some(name) => name,
+                        None => format!(""),
+                    };
+
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+
+                    format!("{} = seq.compreg {} {} {} {} : {}", output_name, input_name, clk, reset, reset_val, typ)
+                }
+            )
         },
 
         SeqHlmem: {
             defs: [handle],
             uses: [clk, reset],
-            attrs: [],
             constraints: [/* TODO: fill this */],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    format!("")
+                }
+            )
         },
 
         SeqRead: {
             defs: [rdata],
             uses: [mem, renable; address],
             attrs: [latency: UIntAttr(UIntAttr)],
-            constraints: [],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    format!("")
+                }
+            )
         },
 
         SeqWrite: {
             defs: [],
             uses: [mem, wenable, wdata; address],
             attrs: [latency: UIntAttr(UIntAttr)],
-            constraints: [],
-            regions: [],
+            print: (
+                |_, _, _, _, _| {
+                    format!("")
+                }
+            )
         },
-        
+
     }
 }
 

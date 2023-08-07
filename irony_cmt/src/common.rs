@@ -1,13 +1,61 @@
-use irony::AttributeTrait;
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UIntType(pub usize);
+
+// TODO: fix this
+impl std::fmt::Display for UIntType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "i{}", self.0)
+    }
+}
+
+impl Into<UIntType> for usize {
+    fn into(self) -> UIntType {
+        UIntType(self)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructType(pub Vec<(String, Box<DataTypeEnum>)>);
 
+// TODO: fix this
+impl std::fmt::Display for StructType {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayType(pub Box<DataTypeEnum>, pub usize);
 
+// TODO: fix this
+impl std::fmt::Display for ArrayType {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct UArrayType(pub Box<DataTypeEnum>, pub usize);
+
+// TODO: fix this
+impl std::fmt::Display for UArrayType {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
+
+// TODO: fix this
+impl std::fmt::Display for SeqHlmemType {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CombVariadicPredicate {
@@ -17,12 +65,7 @@ pub enum CombVariadicPredicate {
     Or,
     Xor,
 }
-impl AttributeTrait for CombVariadicPredicate {
-    type DataTypeT = DataTypeEnum;
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-}
+
 
 impl CombVariadicPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -36,15 +79,31 @@ impl CombVariadicPredicate {
     }
 }
 
+impl std::fmt::Display for CombVariadicPredicate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_str())
+    }
+}
+
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum CombUnaryPredicate {
     Not,
     Neg, 
 }
-impl AttributeTrait for CombUnaryPredicate {
-    type DataTypeT = DataTypeEnum;
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
+
+impl CombUnaryPredicate {
+    pub fn get_str(&self) -> &'static str {
+        match self {
+            CombUnaryPredicate::Not => "not",
+            CombUnaryPredicate::Neg => "neg",
+        }
+    }
+}
+
+impl std::fmt::Display for CombUnaryPredicate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_str())
     }
 }
 
@@ -59,12 +118,6 @@ pub enum CombBinaryPredicate {
     ShrS,
     Sub,
 }
-impl AttributeTrait for CombBinaryPredicate {
-    type DataTypeT = DataTypeEnum;
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-}
 
 impl CombBinaryPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -78,6 +131,12 @@ impl CombBinaryPredicate {
             CombBinaryPredicate::ShrS => "shrs",
             CombBinaryPredicate::Sub => "sub",
         }
+    }
+}
+
+impl std::fmt::Display for CombBinaryPredicate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_str())
     }
 }
 
@@ -98,12 +157,7 @@ pub enum CombICmpPredicate {
     WEQ,
     WNE,
 }
-impl AttributeTrait for CombICmpPredicate {
-    type DataTypeT = DataTypeEnum;
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-}
+
 
 impl CombICmpPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -126,14 +180,15 @@ impl CombICmpPredicate {
     }
 }
 
+impl std::fmt::Display for CombICmpPredicate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_str())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct StringAttr(pub String);
-impl AttributeTrait for StringAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-    type DataTypeT = DataTypeEnum;
-}
+
 
 impl Into<StringAttr> for &str {
     fn into(self) -> StringAttr {
@@ -147,14 +202,14 @@ impl Into<StringAttr> for String {
     }
 }
 
+impl std::fmt::Display for StringAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoolAttr(pub bool);
-impl AttributeTrait for BoolAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-    type DataTypeT = DataTypeEnum;
-}
 
 impl Into<BoolAttr> for bool {
     fn into(self) -> BoolAttr {
@@ -162,15 +217,16 @@ impl Into<BoolAttr> for bool {
     }
 }
 
+impl std::fmt::Display for BoolAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", if self.0 { "1" } else { "0" })
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UIntAttr(pub u32);
-impl AttributeTrait for UIntAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
-    }
-    type DataTypeT = DataTypeEnum;
-}
+
 
 impl Into<UIntAttr> for u32 {
     fn into(self) -> UIntAttr {
@@ -183,34 +239,54 @@ impl Into<UIntAttr> for usize {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TypeAttr(pub DataTypeEnum);
-impl AttributeTrait for TypeAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        self.0.clone()
+impl std::fmt::Display for UIntAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
-    type DataTypeT = DataTypeEnum;
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeAttr(pub DataTypeEnum);
+
+impl std::fmt::Display for TypeAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConstantAttr(pub Vec<bool>);
-impl AttributeTrait for ConstantAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
+impl std::fmt::Display for ConstantAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+        for b in &self.0 {
+            s.push_str(if *b { "1" } else { "0" });
+        }
+        write!(f, "{}", s)
     }
-    type DataTypeT = DataTypeEnum;
 }
-
+impl<const N:usize> Into<ConstantAttr> for [u32;N] {
+    fn into(self) -> ConstantAttr {
+        let mut v = Vec::new();
+        for i in 0..N {
+            v.push(self[i] != 0);
+        }
+        ConstantAttr(v)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
-impl AttributeTrait for ArrayAttr {
-    fn dtype(&self) -> DataTypeEnum {
-        DataTypeEnum::None
+impl std::fmt::Display for ArrayAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut sub_str = Vec::new();
+        for b in &self.0 {
+            sub_str.push(format!("{}", b));
+        }
+        write!(f, "{}", sub_str.join(","))
     }
-    type DataTypeT = DataTypeEnum;
 }
+
 
 impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
     fn into(self) -> ArrayAttr {
@@ -223,24 +299,21 @@ impl Into<ArrayAttr> for () {
         ArrayAttr(Vec::<AttributeEnum>::new())
     }
 }
-#[derive(Clone, Debug, PartialEq)]
-pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
 
 irony::data_type_enum![
     DataTypeEnum = {
-        UInt(usize),
+        UInt(UIntType),
         Struct(StructType),
         Array(ArrayType),
         UArray(UArrayType),
         SeqHlmem(SeqHlmemType),
-        None
     }
 ];
 
 irony::attribute_enum! {
     [data_type = DataTypeEnum]
     AttributeEnum = {
-        ConstaintAttr(ConstantAttr),
+        ConstantAttr(ConstantAttr),
         BoolAttr(BoolAttr),
         UIntAttr(UIntAttr), 
         StringAttr(StringAttr), 

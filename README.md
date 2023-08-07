@@ -12,17 +12,17 @@
 | Operation   | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
 | Constraint  | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
 | Environ     | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
+| Print       | :white_check_mark:   | :white_check_mark:   | :white_check_mark:    |
+| Parse       | :white_large_square: | :white_large_square: | :white_large_square:  |
 | Pass        | :white_large_square: | :white_large_square: | :white_large_square:  |
 | Interpret   | :white_large_square: | :white_large_square: | :white_large_square:  |
-| Parse/Print | :white_large_square: | :white_large_square: | :white_large_square:  |
 
 #### Planned Features
 
 - [ ] Pass and Pass Manager;
+- [ ] Use [laps](https://github.com/uv-xiao/laps) for Parse and Print;
 - [ ] Logging system;
-- [ ] More concise APIs;
-- [ ] Type inference support;
-- [ ] More casual entity definition: flexible data storage;
+- [ ] Query analysis system, refer to [MLIR PM](https://mlir.llvm.org/docs/PassManagement/#querying-analyses);
 - [ ] Dialect support: combination of Enums?
 
 ### Details
@@ -30,6 +30,8 @@
 loot at `irony` package
 
 > package `irony_macros` is useless now, which has been moved to `.gitignore`;
+
+Print and Constraint are implemented with Rust Closure=, which is kind of ugly. I will try to use `laps` to make it more concise (especially for Parse and Print).
 
 ## Demo
 

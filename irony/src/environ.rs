@@ -1,4 +1,4 @@
-use crate::{AttributeTrait, Region, RegionId};
+use crate::{Region, RegionId, OpPrinterTrait, Id};
 
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
@@ -6,10 +6,10 @@ use super::operation::{Op, OpId};
 
 pub trait Environ: Sized {
     type DataTypeT;
-    type AttributeT: AttributeTrait<DataTypeT = Self::DataTypeT>;
+    type AttributeT: Clone+PartialEq+std::fmt::Display;
 
     type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type EntityT: Entity<DataTypeT = Self::DataTypeT>;
+    type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
     type ConstraintT: ConstraintTrait<AttributeT = Self::AttributeT, DataTypeT = Self::DataTypeT>;
 
     fn get_defs(&self, id: EntityId) -> Vec<OpId>;
@@ -50,6 +50,38 @@ pub trait Environ: Sized {
             )
         });
         all_true
+    }
+
+    fn print_op(&self, op: OpId) -> String {
+        let op = self.get_op(op);
+        let printer = op.get_printer();
+        let attributes = op.get_attrs();
+        let uses = op.get_uses();
+        let defs = op.get_defs();
+        let regions = op.get_regions();
+        printer.print(self, attributes, uses, defs, regions)
+    }
+
+    fn print_entity(&self, entity: EntityId) -> String {
+        // TODO: Add better printing for entities
+        let entity = self.get_entity(entity);
+        let attrs = entity.get_attrs();
+        if let Some(name) = crate::utils::extract_vec(&attrs, "name") {
+            format!("%{}", name)   
+        }
+        else {
+            format!("%{}", entity.id())
+        }
+    }
+
+    fn print_region(&self, region: RegionId) -> String {
+        let region = self.get_region(region);
+        let mut ops = vec![];
+
+        for op in region.op_children.iter() {
+            ops.push(format!("{}",self.print_op(*op)));
+        }
+        format!("{{\n{}\n}}", crate::utils::print::tab(ops.join("\n")))
     }
 
     fn dump(&self) -> String;
@@ -240,7 +272,7 @@ macro_rules! environ_def {
                 }
             }
 
-            fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
+            fn with_region<F: Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
                 self.begin_region(parent);
                 f(self);
                 self.end_region();

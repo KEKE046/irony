@@ -20,11 +20,12 @@ irony::constraint_def! {
             
             // TODO: check output_namesa and output_types have the same length
 
+            irony::utils::extract_vec(&attrs, "arg_names") == super::utils::extract_input_names(env, region) &&
             irony::utils::extract_vec(&attrs, "arg_types") == super::utils::extract_input_types(env, region) &&
             irony::utils::extract_vec(&attrs, "output_types") == super::utils::extract_output_types(env, region)
         }),
         InstanceConstraint(InstanceConstraint ,
-            |env: &E, attrs, uses: Vec<(String, Vec<EntityId>)>, defs: Vec<(String, Vec<EntityId>)>, _| {
+            |env: &E, attrs, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
             let target_id = irony::utils::extract_vec(&attrs, "target_id");
             let Some(AttributeEnum::UIntAttr(target_id)) = target_id else {
                 panic!("target_id must be a UIntAttr")
@@ -41,7 +42,11 @@ irony::constraint_def! {
 
         }),
 
-        SameTypeAggregate(SameTypeAggregate ,
+        SameTypeConstant(SameTypeConstant, 
+            |_, _, _, _, _|  {
+                true
+        }),
+        SameTypeAggregate(SameTypeAggregate,
             |_, _, _, _, _|  {
                 true
         }),

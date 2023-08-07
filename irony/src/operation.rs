@@ -1,17 +1,20 @@
 use std::fmt::Debug;
 
-use crate::{RegionId, ConstraintTrait, AttributeTrait};
+pub use paste::paste;
 
 use super::common::Id;
 use super::entity::EntityId;
+use crate::printer::OpPrinterTrait;
+use crate::{ConstraintTrait, RegionId};
 
-pub trait Op: Id+Debug {
+pub trait Op: Id + Debug {
     type DataTypeT;
-    type AttributeT: AttributeTrait<DataTypeT = Self::DataTypeT>;
+    type AttributeT;
     type ConstraintT: ConstraintTrait<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
+    type PrinterT: OpPrinterTrait<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
 
-    fn get_defs(&self) -> Vec<(String, Vec<EntityId>)>;
-    fn get_uses(&self) -> Vec<(String, Vec<EntityId>)>;
+    fn get_defs(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
+    fn get_uses(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
 
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
     fn get_constraints(&self) -> Vec<Self::ConstraintT>;
@@ -27,36 +30,34 @@ pub trait Op: Id+Debug {
     fn use_region(&self, region: RegionId) -> bool;
 
     fn get_op_name(&self) -> String;
+
+    fn get_printer(&self) -> Self::PrinterT;
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct OpId(pub usize);
 impl From<usize> for OpId {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
+    fn from(value: usize) -> Self { Self(value) }
 }
 impl Id for OpId {
-    fn id(&self) -> usize {
-        self.0
-    }
-    fn set_id(&mut self, id: usize) {
-        self.0 = id
-    }
+    fn id(&self) -> usize { self.0 }
+
+    fn set_id(&mut self, id: usize) { self.0 = id }
 }
 
 #[macro_export]
 macro_rules! op_def {
     (
         [data_type = $data_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
-        $name_enum:ident = {
+        $name_enum:ident  = {
             $(
-                $name_op:ident: {
-                    defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
-                    uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
-                    attrs: [$($attr:ident : $attr_variant:ident($attr_inner_ty:ty)),*],
-                    constraints: [$($constraint:expr),*],
-                    regions: [$($region:ident),*],
+                $name:ident : {
+                    defs: [$($def:ident),*$(;$($variadic_def:ident),*)?],
+                    uses: [$($use:ident),*$(;$($variadic_use:ident),*)?],
+                    $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+                    $(constraints: [$($constraint:expr),*],)?
+                    $(regions: [$($region:ident),*],)?
+                    print: ($($print_tt:tt)*)$(,)?
                 }
             ),*
             $(,)?
@@ -66,19 +67,25 @@ macro_rules! op_def {
         $(
             irony::op_def_one! {
                 [data_type = $data_ty, attr = $attr_ty, constraint = $constraint_ty]
-                $name_op : {
+                $name: {
                     defs : [$($def),*$(;$($variadic_def),+)?],
                     uses : [$($use),*$(;$($variadic_use),+)?],
-                    attrs : [$($attr : $attr_variant($attr_inner_ty)),*],
-                    constraints : [$($constraint),*],
-                    regions: [$($region),*],
+                    $(attrs : [$($attr : $attr_variant($attr_inner_ty)),*],)?
+                    $(constraints : [$($constraint),*],)?
+                    $(regions: [$($region),*],)?
+                    print: ($($print_tt)*)
                 }
             }
         )*
 
         irony::op_enum! {
             [data_type = $data_ty, attr = $attr_ty, constraint = $constraint_ty]
-            $name_enum = $($name_op),*
+            $name_enum = $($name),*
+        }
+
+        irony::op_printer! {
+            [data_type = $data_ty, attr = $attr_ty]
+            $name_enum = $($name),*
         }
 
 
@@ -91,9 +98,10 @@ macro_rules! op_def_one {
         $name:ident : {
             defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
             uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
-            attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],
-            constraints: [$($constraint:expr),*],
-            regions: [$($region:ident),*],
+            $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+            $(constraints: [$($constraint:expr),*],)?
+            $(regions: [$($region:ident),*],)?
+            print: ($($print_tt:tt)*)$(,)?
         }
     ) => {
         #[derive(PartialEq, Debug)]
@@ -104,10 +112,11 @@ macro_rules! op_def_one {
             $($($variadic_def: Vec<irony::EntityId>,)*)?
             $($use:Option<irony::EntityId>,)*
             $($($variadic_use: Vec<irony::EntityId>,)*)?
-            $($attr: Option<$attr_inner_ty>,)*
-            $($region: Option<irony::RegionId>,)*
+            $($($attr: Option<$attr_inner_ty>,)*)?
+            $($($region: Option<irony::RegionId>,)*)?
             constraints: Vec<$constraint_ty>,
             parent: Option<irony::RegionId>,
+            printer: paste!([< $name Printer >]),
         }
 
         impl irony::Id for $name {
@@ -120,29 +129,31 @@ macro_rules! op_def_one {
             }
         }
 
+
         impl irony::Op for $name {
             type DataTypeT = $data_ty;
             type ConstraintT = $constraint_ty;
             type AttributeT = $attr_ty;
+            type PrinterT = paste!([< $name Printer >]);
 
-            fn get_defs(&self) -> Vec<(String, Vec<irony::EntityId>)> {
+            fn get_defs(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 vec![
-                    $((format!("{}", stringify!($def)), vec![self.$def.unwrap()])),*
-                    $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned()))*)?
+                    $((format!("{}", stringify!($def)), vec![self.$def.to_owned()])),*
+                    $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned().into_iter().map(|x| Some(x)).collect()))*)?
                 ]
             }
 
-            fn get_uses(&self) -> Vec<(String, Vec<irony::EntityId>)> {
+            fn get_uses(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 vec![
-                    $((format!("{}", stringify!($use)), vec![self.$use.unwrap()]),)*
-                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned()))*)?
+                    $((format!("{}", stringify!($use)), vec![self.$use.to_owned()]),)*
+                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned().into_iter().map(|x| Some(x)).collect()))*)?
                 ]
 
             }
 
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 vec![
-                    $((format!("{}", stringify!($attr)), self.$attr.to_owned().unwrap().into())),*
+                    $($((format!("{}", stringify!($attr)), self.$attr.to_owned().unwrap().into())),*)?
                 ]
             }
 
@@ -151,11 +162,23 @@ macro_rules! op_def_one {
             }
 
             fn uses(&self, entity: irony::EntityId) -> bool {
-                self.get_uses().iter().flat_map(|(_, v)| v.iter()).any(|&x| x.id() == entity.id())
+                self.get_uses().iter().flat_map(|(_, v)| v.iter()).any(|&x| {
+                    if let Some(x) = x {
+                        x.id() == entity.id()
+                    } else {
+                        false
+                    }}
+                )
             }
 
             fn defs(&self, entity: irony::EntityId) -> bool {
-                self.get_defs().iter().flat_map(|(_, v)| v.iter()).any(|&x| x.id() == entity.id())
+                self.get_defs().iter().flat_map(|(_, v)| v.iter()).any(|&x| {
+                    if let Some(x) = x {
+                        x.id() == entity.id()
+                    } else {
+                        false
+                    }}
+                )
             }
 
 
@@ -168,7 +191,7 @@ macro_rules! op_def_one {
 
             fn get_regions(&self) -> Vec<(String, irony::RegionId)> {
                 vec![
-                    $((format!("{}", stringify!($region)), self.$region.unwrap())),*
+                    $($((format!("{}", stringify!($region)), self.$region.unwrap())),*)?
                 ]
             }
 
@@ -179,6 +202,10 @@ macro_rules! op_def_one {
             fn get_op_name(&self) -> String {
                 self.op_name.clone()
             }
+
+            fn get_printer(&self) -> Self::PrinterT {
+                self.printer.clone()
+            }
         }
 
 
@@ -188,8 +215,8 @@ macro_rules! op_def_one {
                 $($($variadic_def: Vec<irony::EntityId>,)*)?
                 $($use: Option<irony::EntityId>,)*
                 $($($variadic_use: Vec<irony::EntityId>,)*)?
-                $($attr: Option<$attr_inner_ty>,)*
-                $($region: Option<irony::RegionId>,)*
+                $($($attr: Option<$attr_inner_ty>,)*)?
+                $($($region: Option<irony::RegionId>,)*)?
             ) -> Self {
 
                 Self {
@@ -199,18 +226,45 @@ macro_rules! op_def_one {
                     $($($variadic_def,)*)?
                     $($use,)*
                     $($($variadic_use,)*)?
-                    $($attr,)*
-                    $($region,)*
+                    $($($attr,)*)?
+                    $($($region,)*)?
 
                     constraints: vec![
-                        $($constraint),*
+                        $($($constraint),*)?
                     ],
                     parent: None,
-
+                    printer: paste!([< $name Printer >]),
                 }
 
             }
         }
+
+        paste! {
+            #[derive(Clone, Debug, PartialEq)]
+            pub struct [< $name Printer >];
+
+            impl OpPrinterTrait for [< $name Printer >] {
+                type DataTypeT = $data_ty;
+                type AttributeT = $attr_ty;
+
+                fn print<'env, E, EntityT: Entity>(
+                    &self,
+                    env: &'env E,
+                    attrs: Vec<(String, Self::AttributeT)>,
+                    uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
+                    defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
+                    regions: Vec<(String, irony::RegionId)>,
+                ) -> String
+                where
+                    E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,
+                    EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT> {
+                        let f = $($print_tt)*;
+                        f(env, attrs, uses, defs, regions)
+                    }
+            }
+
+        }
+
     };
 }
 
@@ -247,13 +301,14 @@ macro_rules! op_enum {
             type DataTypeT = $data_ty;
             type AttributeT = $attr;
             type ConstraintT = $constraint;
+            type PrinterT = paste!([< $name Printer >]);
 
-            fn get_defs(&self) -> Vec<(String, Vec<irony::EntityId>)> {
+            fn get_defs(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 match self {
                     $($name::$variant(inner) => inner.get_defs()),*
                 }
             }
-            fn get_uses(&self) -> Vec<(String, Vec<irony::EntityId>)> {
+            fn get_uses(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 match self {
                     $($name::$variant(inner) => inner.get_uses()),*
                 }
@@ -306,12 +361,63 @@ macro_rules! op_enum {
                     $($name::$variant(inner) => inner.use_region(region)),*
                 }
             }
-            
+
             fn get_op_name(&self) -> String {
                 match self {
                     $($name::$variant(inner) => inner.get_op_name()),*
                 }
             }
+
+            fn get_printer(&self) -> Self::PrinterT {
+                match self {
+                    $($name::$variant(inner) => inner.get_printer().into()),*
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! op_printer {
+    (
+        [data_type = $data_ty:ty, attr = $attr:ty]
+        $name:ident = $($variant:ident),*
+    ) => {
+        paste! {
+            pub enum [<$name Printer>] {
+                $($variant([<$variant Printer>])),*
+            }
+
+            impl irony::OpPrinterTrait for [<$name Printer>] {
+                type DataTypeT = $data_ty;
+                type AttributeT = $attr;
+
+                fn print<'env, E, EntityT: Entity>(
+                    &self,
+                    env: &'env E,
+                    attrs: Vec<(String, Self::AttributeT)>,
+                    uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
+                    defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
+                    regions: Vec<(String, irony::RegionId)>,
+                ) -> String
+                where
+                    E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,
+                    EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT> {
+                        match self {
+                            $([<$name Printer>]::$variant(inner) => inner.print(env, attrs, uses, defs, regions)),*
+                        }
+                    }
+            }
+
+            $(
+
+                impl Into<[<$name Printer>]> for [<$variant Printer>] {
+                    fn into(self) -> [<$name Printer>] {
+                        [<$name Printer>]::$variant(self)
+                    }
+                }
+
+            )*
         }
     };
 }
