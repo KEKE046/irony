@@ -31,7 +31,7 @@ impl PassTrait<(), ()> for RenamePass {
                 AttributeEnum::StringAttr(StringAttr(format!("{}_{}", name, id)))
             },
         ) else {panic!()};
-        let Some(AttributeEnum::ArrayAttr(output_names)) = extract_attrs_for_region(
+        let Some(AttributeEnum::ArrayAttr(_output_names)) = extract_attrs_for_region(
             env,
             env.get_op(op_id).get_regions()[0].1,
             "HwOutput",

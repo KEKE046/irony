@@ -87,7 +87,7 @@ pub trait Environ: Sized {
 
     fn dump(&self) -> String;
     
-    fn run_passes(&mut self); // -> ???
+    fn run_passes(&mut self) -> Result<(), ()>; // -> ???
 }
 
 #[macro_export]
@@ -316,9 +316,11 @@ macro_rules! environ_def {
                 format!("entity table: {:#?}\nregion table: {:#?}\nop table: {:#?}", self.entity_table.get_map(), self.region_table.get_map(), self.op_table.get_map())
             }
 
-            fn run_passes(&mut self) {
+            fn run_passes(&mut self) -> Result<(), ()>{
                 let pass_manager = self.pass_manager.clone();
-                pass_manager.run_passes(self);
+                pass_manager.run_passes(self)?;
+                Ok(())
+
             }
         }
 

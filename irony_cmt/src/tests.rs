@@ -110,7 +110,7 @@ mod hw_test {
     }
 
     #[test]
-    pub fn print_test() {
+    pub fn print_test() -> Result<(), ()> {
         let (mut cmt, _, _) = create();
         
         let no_parent = cmt.op_table.iter().filter(|(_, op)| op.get_parent().is_none()).map(|(id, _)| OpId(*id)).collect::<Vec<_>>();
@@ -127,11 +127,12 @@ mod hw_test {
 
         cmt.pass_manager.add_passes(vec![PassEnum::RenamePass(RenamePass)], vec![no_parent.to_owned()]);
         
-        cmt.run_passes();
+        cmt.run_passes()?;
 
         for op in no_parent.iter() {
             println!("{}", cmt.print_op(*op));
         }
+        Ok(())
         
 
     }
