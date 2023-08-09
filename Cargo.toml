@@ -3,5 +3,6 @@
 members = [
   "irony",
   "irony_examples",
-  "irony_circt"
+  "irony_cmt",
+  "sketch",
 ]

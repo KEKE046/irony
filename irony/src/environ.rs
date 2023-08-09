@@ -1,4 +1,4 @@
-use crate::{AttributeTrait, Region, RegionId};
+use crate::{Region, RegionId, OpPrinterTrait, Id};
 
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
@@ -6,17 +6,22 @@ use super::operation::{Op, OpId};
 
 pub trait Environ: Sized {
     type DataTypeT;
-    type AttributeT: AttributeTrait<DataTypeT = Self::DataTypeT>;
+    type AttributeT: Clone+PartialEq+std::fmt::Display;
 
     type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type EntityT: Entity<DataTypeT = Self::DataTypeT>;
+    type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
     type ConstraintT: ConstraintTrait<AttributeT = Self::AttributeT, DataTypeT = Self::DataTypeT>;
 
-    fn get_def(&self, id: EntityId) -> Option<OpId>;
+    fn get_defs(&self, id: EntityId) -> Vec<OpId>;
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
     fn get_entity(&self, id: EntityId) -> &Self::EntityT;
     fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
+    fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
+    fn get_entity_entry(&mut self , entity_id: EntityId) -> indexmap::map::Entry<usize, Self::EntityT>;
+
     fn get_op(&self, id: OpId) -> &Self::OpT;
+    fn get_op_entry(&mut self , op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
+
     fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
     fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
     fn get_region(&self, id: RegionId) -> &Region;
@@ -25,8 +30,10 @@ pub trait Environ: Sized {
     fn set_entity_parent(&mut self, id: EntityId);
     fn set_op_parent(&mut self, id: OpId);
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
+    fn begin_region(&mut self, region: Option<RegionId>);
+    fn end_region(&mut self);
 
-    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: RegionId, f: F);
+    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: Option<RegionId>, f: F);
     fn verify_op(&self, op: OpId) -> bool {
         let op = self.get_op(op);
         let constraints = op.get_constraints();
@@ -45,12 +52,48 @@ pub trait Environ: Sized {
         });
         all_true
     }
+
+    fn print_op(&self, op: OpId) -> String {
+        let op = self.get_op(op);
+        let printer = op.get_printer();
+        let attributes = op.get_attrs();
+        let uses = op.get_uses();
+        let defs = op.get_defs();
+        let regions = op.get_regions();
+        printer.print(self, attributes, uses, defs, regions)
+    }
+
+    fn print_entity(&self, entity: EntityId) -> String {
+        // TODO: Add better printing for entities
+        let entity = self.get_entity(entity);
+        let attrs = entity.get_attrs();
+        if let Some(name) = crate::utils::extract_vec(&attrs, "name") {
+            format!("%{}", name)   
+        }
+        else {
+            format!("%{}", entity.id())
+        }
+    }
+
+    fn print_region(&self, region: RegionId) -> String {
+        let region = self.get_region(region);
+        let mut ops = vec![];
+
+        for op in region.op_children.iter() {
+            ops.push(format!("{}",self.print_op(*op)));
+        }
+        format!("{{\n{}\n}}", crate::utils::print::tab(ops.join("\n")))
+    }
+
+    fn dump(&self) -> String;
+    
+    fn run_passes(&mut self) -> Result<(), ()>; // -> ???
 }
 
 #[macro_export]
 macro_rules! environ_def {
     (
-        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty, pm = $pm_ty:ty]
         struct $name:ident;
     ) => {
         irony::environ_def! {
@@ -60,13 +103,14 @@ macro_rules! environ_def {
             OP: $op_ty;
             ATTR: $attr_ty;
             CONSTRAINT: $constraint_ty;
+            PASSMANAGER: $pm_ty;
             NAME: $name;
             FIELDS: ;
         }
     };
 
     (
-        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty]
+        [data_type = $data_ty:ty, attr = $attr_ty:ty, entity = $entity_ty:ty, op = $op_ty:ty, constraint = $constraint_ty:ty, pm = $pm_ty:ty]
         struct $name:ident {
             $(
                 $field_vis:vis $field_name:ident : $field_ty:ty
@@ -80,6 +124,7 @@ macro_rules! environ_def {
             OP: $op_ty;
             ATTR: $attr_ty;
             CONSTRAINT: $constraint_ty;
+            PASSMANAGER: $pm_ty;
             NAME: $name;
             FIELDS: $($field_vis $field_name : $field_ty)*;
         }
@@ -91,16 +136,19 @@ macro_rules! environ_def {
         OP: $op_ty:ty;
         ATTR: $attr_ty:ty;
         CONSTRAINT: $constraint_ty:ty;
+        PASSMANAGER: $pm_ty:ty;
         NAME: $name:ident ;
         FIELDS: $($field_vis:vis $field_name:ident : $field_ty:ty)* ;
     ) => {
 
+        #[StructFields(pub)]
         #[derive(Default, Debug)]
         pub struct $name {
             op_table: irony::FxMapWithUniqueId<$op_ty>,
             entity_table: irony::FxMapWithUniqueId<$entity_ty>,
             region_table: irony::FxMapWithUniqueId<irony::Region>,
-            parent_stack: Vec<irony::RegionId>,
+            parent_stack: Vec<Option<irony::RegionId>>,
+            pass_manager: $pm_ty,
 
             $($field_vis $field_name: $field_ty,)*
         }
@@ -116,11 +164,12 @@ macro_rules! environ_def {
 
             type AttributeT = $attr_ty;
 
-            fn get_def(&self, entity: irony::EntityId) -> Option<irony::OpId> {
+            fn get_defs(&self, entity: irony::EntityId) -> Vec<irony::OpId> {
                 self.op_table
                 .iter()
-                .find(|tuple| tuple.1.defs(entity))
+                .filter(|tuple| tuple.1.defs(entity))
                 .map(|tuple| irony::OpId::from(*tuple.0))
+                .collect()
             }
 
             fn get_uses(&self, entity: irony::EntityId) -> Vec<irony::OpId> {
@@ -150,6 +199,26 @@ macro_rules! environ_def {
                 .collect()
             }
 
+            fn get_entities_with_parent(&self, parent: Option<RegionId>) -> Vec<EntityId> {
+                self.entity_table.iter().filter_map(|(id, entity)| {
+                    if entity.get_parent() == parent {
+                        Some(EntityId(*id))
+                    } else {
+                        None
+                    }
+                }).collect()
+            }
+
+            fn get_entity_entry(&mut self , entity_id: irony::EntityId) -> indexmap::map::Entry<usize, Self::EntityT> {
+                // match self.entity_table.entry(entity_id) {
+                //     indexmap::map::Entry::Occupied(entry) => entry.into_mut(),
+                //     indexmap::map::Entry::Vacant(entry) =>  {
+                //         panic!("get entity not in the table by id \ntable: {:#?}\nentity-id: {:#?}",self.entity_table.get_map(), entity_id.id())
+                //     }
+                // }
+                self.entity_table.entry(entity_id.id())
+            }
+
             fn get_op(&self, id: irony::OpId) -> &Self::OpT {
                 match self.op_table.get(&id.id()) {
                     Some(op) =>op,
@@ -160,6 +229,11 @@ macro_rules! environ_def {
                     ),
                 }
             }
+            
+            fn get_op_entry(&mut self, op_id: irony::OpId) -> indexmap::map::Entry<usize, Self::OpT> {
+                self.op_table.entry(op_id.id())
+            }
+
             fn get_ops(&self, ids: &[irony::OpId]) -> Vec<&Self::OpT> {
                 ids.iter()
                 .map(|id| self.get_op(id.to_owned()))
@@ -194,37 +268,59 @@ macro_rules! environ_def {
                 irony::OpId(id)
             }
 
-            fn set_entity_parent(&mut self, id: irony::EntityId) {
+            fn set_entity_parent(&mut self, entity: irony::EntityId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.entity_table
-                        .entry(id.id())
+                        .entry(entity.id())
                         .and_modify(|entity| entity.set_parent(parent.to_owned()));
-                    self.region_table.entry(parent.id()).and_modify(|region|
-                        region.add_entity_child(irony::EntityId(id.id()))
-                    );
+                    if let Some(parent) = parent {
+                        self.region_table.entry(parent.id()).and_modify(|region|
+                            region.add_entity_child(irony::EntityId(entity.id()))
+                        );
+                    }
                 }
             }
 
-            fn set_op_parent(&mut self, id: irony::OpId) {
+            fn set_op_parent(&mut self, op: irony::OpId) {
                 if let Some(parent) = self.parent_stack.last() {
                     self.op_table
-                        .entry(id.id())
-                        .and_modify(|entity| entity.set_parent(parent.to_owned()));
-                    self.region_table.entry(parent.id()).and_modify(|region|
-                        region.add_op_child(irony::OpId(id.id()))
-                    );
+                        .entry(op.id())
+                        .and_modify(|op| op.set_parent(parent.to_owned()));
+                    if let Some(parent) = parent {
+                        self.region_table.entry(parent.id()).and_modify(|region|
+                            region.add_op_child(irony::OpId(op.id()))
+                        );
+                    }
                 }
             }
 
-            fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: irony::RegionId, f: F) {
-                self.parent_stack.push(parent);
+            fn with_region<F: Fn(&mut Self) -> ()>(&mut self, parent: Option<irony::RegionId>, f: F) {
+                self.begin_region(parent);
                 f(self);
-                self.parent_stack.pop();
+                self.end_region();
             }
 
             fn get_region_use(&self, region: irony::RegionId) -> Option<irony::OpId> {
                 self.op_table.iter().find(|tuple| tuple.1.use_region(region))
                 .map(|tuple| irony::OpId::from(*tuple.0))
+            }
+
+            fn begin_region(&mut self, region: Option<irony::RegionId>) {
+                self.parent_stack.push(region);
+            }
+            fn end_region(&mut self) {
+                self.parent_stack.pop();
+            }
+
+            fn dump(&self) -> String {
+                format!("entity table: {:#?}\nregion table: {:#?}\nop table: {:#?}", self.entity_table.get_map(), self.region_table.get_map(), self.op_table.get_map())
+            }
+
+            fn run_passes(&mut self) -> Result<(), ()>{
+                let pass_manager = self.pass_manager.clone();
+                pass_manager.run_passes(self)?;
+                Ok(())
+
             }
         }
 

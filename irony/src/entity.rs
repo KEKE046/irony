@@ -5,13 +5,16 @@ use super::operation::OpId;
 
 pub trait Entity: Id {
     type DataTypeT;
+    type AttributeT: Clone+PartialEq+std::fmt::Display;
     fn get_dtype(&self) -> Option<Self::DataTypeT>;
 
-    fn get_def<E: Environ>(&self, env: &E) -> Option<OpId>;
+    fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;
     fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
     fn as_id(&self) -> EntityId;
     fn get_parent(&self) -> Option<RegionId>;
-    fn set_parent(&mut self, parent: RegionId);
+    fn set_parent(&mut self, parent: Option<RegionId>);
+    fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>); 
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -88,7 +91,7 @@ impl Region {
 
     pub fn add_op_child(&mut self, op: OpId) {
         if let Some(_) = self.op_children.iter().find(|&op_exist| op_exist.id() == op.id()) {
-            panic!("{} has already been in the op_children of {}", op.id(), self.id())
+            panic!("{} has already been in the op_children of {}\n", op.id(), self.id())
         } else {
             self.op_children.push(op)
         }
@@ -106,18 +109,18 @@ impl Region {
 #[macro_export]
 macro_rules! entity_def {
     (
-        [data_type = $data_type:ty] 
+        [data_type = $data_type:ty, attr = $attr_ty:ty] 
         $name_enum:ident = {
-            $($name:ident $(: (store_data=$expr:ident))?),+
+            $($name:ident $(: [$($attr:ident : $attr_variant:ident($attr_inner_ty:ty)),*])?),+
             $(,)?
         }
     ) => {
         $(irony::entity_def_one! {
-            $name : ($(store_data = $expr,)? data_type = $data_type)
+            $name : ($(attrs = [$($attr: $attr_variant($attr_inner_ty))*],)? data_type = $data_type, attr = $attr_ty)
         })*
 
         irony::entity_enum! {
-            [data_type = $data_type]
+            [data_type = $data_type, attr = $attr_ty]
             $name_enum = $($name),*
         }
     };
@@ -125,26 +128,23 @@ macro_rules! entity_def {
 
 #[macro_export]
 macro_rules! entity_def_one {
-    ($name:ident : (data_type = $data_type:ty)) => {
-        irony::entity_def_one! {
-            $name : (store_data = false, data_type = $data_type)
-        }
-    };
 
-    ($name:ident : (store_data = true, data_type = $data_type:ty)) => {
+
+    ($name:ident : ($(attrs = [$($attr:ident: $attr_variant:ident($attr_inner_ty:ty))*],)? data_type = $data_type:ty, attr = $attr_ty:ty)) => {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name {
             pub id: usize,
-            pub sym: irony::Symbol,
             pub parent: Option<irony::RegionId>,
             pub dtype: Option<$data_type>,
+            $($(pub $attr: Option<$attr_ty>,)*)?
         }
 
         impl irony::Entity for $name {
             type DataTypeT = $data_type;
+            type AttributeT = $attr_ty;
 
-            fn get_def<E: irony::Environ>(&self, env: &E) -> Option<irony::OpId> {
-                env.get_def(self.as_id())
+            fn get_defs<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
+                env.get_defs(self.as_id())
             }
 
             fn get_uses<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
@@ -163,8 +163,29 @@ macro_rules! entity_def_one {
                 self.parent
             }
 
-            fn set_parent(&mut self, parent: irony::RegionId) {
-                self.parent = Some(parent)
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
+                self.parent = parent
+            }
+            fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
+                let mut attrs = vec![];
+                $(
+                    $(
+                        if let Some(attr) = self.$attr.to_owned() {
+                            attrs.push((String::from(stringify!($attr)), attr.into()))
+                        }
+                    )*
+                )?
+                attrs
+            }
+
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
+                $(
+                    $(
+                        if let Some((name, attr)) = attrs.iter().find(|(name, _)| name == &String::from(stringify!($attr))) {
+                            self.$attr = Some(attr.to_owned().into())
+                        }
+                    )*
+                )?
             }
         }
 
@@ -178,79 +199,23 @@ macro_rules! entity_def_one {
         }
 
         impl $name {
-            pub fn new(name: &str, dtype: $data_type) -> Self {
+            pub fn new(dtype: Option<$data_type>, $($($attr: Option<$attr_inner_ty>),*)?) -> Self {
                 Self {
                     id: 0,
-                    sym: irony::Symbol::new(String::from(name)),
-                    dtype: Some(dtype),
+                    dtype: dtype,
                     parent: None,
+                    $($($attr: $attr.map(|x| x.into())),*)?
                 }
             }
         }
     };
 
-    ($name:ident : (store_data = false, data_type = $data_type:ty)) => {
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name {
-            pub id: usize,
-            pub sym: irony::Symbol,
-            pub parent: Option<irony::RegionId>,
-            pub dtype: Option<$data_type>,
-        }
-
-        impl irony::Entity for $name {
-            type DataTypeT = $data_type;
-
-            fn get_def<E: irony::Environ>(&self, env: &E) -> Option<irony::OpId> {
-                env.get_def(self.as_id())
-            }
-
-            fn get_uses<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
-                env.get_uses(self.as_id())
-            }
-
-            fn get_dtype(&self) -> Option<Self::DataTypeT> {
-                self.dtype.to_owned()
-            }
-
-            fn as_id(&self) -> irony::EntityId {
-                irony::EntityId(self.id)
-            }
-
-            fn get_parent(&self) -> Option<irony::RegionId> {
-                self.parent
-            }
-
-            fn set_parent(&mut self, parent: irony::RegionId) {
-                self.parent = Some(parent)
-            }
-        }
-
-        impl irony::Id for $name {
-            fn id(&self) -> usize {
-                self.id
-            }
-            fn set_id(&mut self, id: usize) {
-                self.id = id
-            }
-        }
-
-        impl $name {
-            pub fn new(name: &str) -> Self {
-                Self {
-                    id: 0,
-                    sym: irony::Symbol::new(String::from(name)),
-                    dtype: None,
-                    parent: None,
-                }
-            }
-        }
-    };
+   
 }
 
 #[macro_export]
 macro_rules! entity_enum {
-    ([data_type = $dtype:ty] $name:ident= $($variant:ident),*) => {
+    ([data_type = $dtype:ty, attr = $attr_ty: ty] $name:ident= $($variant:ident),*) => {
         #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
             $($variant($variant)),*
@@ -258,10 +223,11 @@ macro_rules! entity_enum {
 
         impl irony::Entity for $name {
             type DataTypeT = $dtype;
+            type AttributeT = $attr_ty;
 
-            fn get_def<E: irony::Environ>(&self, env: &E) -> Option<irony::OpId> {
+            fn get_defs<E: irony::Environ>(&self, env: &E) -> Vec<irony::OpId> {
                 match self {
-                    $($name::$variant(inner) => inner.get_def(env),)*
+                    $($name::$variant(inner) => inner.get_defs(env),)*
                 }
             }
 
@@ -289,9 +255,20 @@ macro_rules! entity_enum {
                 }
             }
 
-            fn set_parent(&mut self, parent: irony::RegionId) {
+            fn set_parent(&mut self, parent: Option<irony::RegionId>) {
                 match self {
                     $($name::$variant(inner) => inner.set_parent(parent), )*
+                }
+            }
+
+            fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
+                match self {
+                    $($name::$variant(inner) => inner.get_attrs(), )*
+                }
+            }
+            fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
+                match self {
+                    $($name::$variant(inner) => inner.set_attrs(attrs), )*
                 }
             }
         }
