@@ -31,7 +31,7 @@ pub trait Environ: Sized {
     fn set_op_parent(&mut self, id: OpId);
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
     fn begin_region(&mut self, region: Option<RegionId>);
-    fn end_region(&mut self);
+    fn end_region(&mut self) -> Option<Option<RegionId>>;
 
     fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: Option<RegionId>, f: F);
     fn verify_op(&self, op: OpId) -> bool {
@@ -308,8 +308,8 @@ macro_rules! environ_def {
             fn begin_region(&mut self, region: Option<irony::RegionId>) {
                 self.parent_stack.push(region);
             }
-            fn end_region(&mut self) {
-                self.parent_stack.pop();
+            fn end_region(&mut self) -> Option<Option<RegionId>> {
+                self.parent_stack.pop()
             }
 
             fn dump(&self) -> String {
