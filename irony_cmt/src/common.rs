@@ -37,7 +37,7 @@ pub struct ArrayType(pub Box<DataTypeEnum>, pub usize);
 // TODO: fix this
 impl std::fmt::Display for ArrayType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "!hw.array<{}*{}>", self.1, self.0)
+        write!(f, "!hw.array<{}x{}>", self.1, self.0)
     }
 }
 
@@ -242,7 +242,7 @@ impl std::fmt::Display for TypeAttr {
 pub struct ConstantAttr(pub Vec<bool>);
 impl std::fmt::Display for ConstantAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", utils::print::from_bits_to_str(self.0.to_owned()))
+        write!(f, "{}", utils::arith::from_bits_to_u32(self.0.to_owned()))
     }
 }
 impl<const N: usize> Into<ConstantAttr> for [u32; N] {
@@ -272,7 +272,43 @@ impl std::fmt::Display for ArrayAttr {
         for b in &self.0 {
             sub_str.push(format!("{}", b));
         }
-        write!(f, "{}", sub_str.join(","))
+        write!(f, "[{}]", sub_str.join(","))
+    }
+}
+
+impl AttributeEnum {
+    pub fn print_for_aggregate_constant(&self, dtype: DataTypeEnum) -> String {
+        match dtype {
+            DataTypeEnum::UInt(uint) => {
+                let AttributeEnum::ConstantAttr(constant) = self else {
+                    panic!("no constant attr for uint")
+                };
+                format!("{} : {}", constant, uint)
+            }, 
+            DataTypeEnum::Array(ArrayType(boxed, size)) => {
+                let AttributeEnum::ArrayAttr(ArrayAttr(array)) = self else {
+                    panic!("no array attr for array")
+                };
+                assert!(array.len() == size);
+
+                let sub_strs = array.iter().map(|x| x.print_for_aggregate_constant(*boxed.to_owned())).collect::<Vec<_>>();
+                format!("[{}]", sub_strs.join(", "))
+            },
+            
+            DataTypeEnum::Struct(StructType(v_field_type)) => {
+                let AttributeEnum::ArrayAttr(ArrayAttr(array)) = self else {
+                    panic!("no array attr for struct")
+                };
+                
+                let sub_strs = v_field_type.iter().zip(array.iter()).map(|((_, dtype), attr)| {
+                    attr.print_for_aggregate_constant(*dtype.to_owned())
+                }).collect::<Vec<_>>();
+
+                format!("[{}]", sub_strs.join(", "))
+            },
+            
+            _ => unimplemented!()
+        }
     }
 }
 

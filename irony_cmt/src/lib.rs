@@ -1,3 +1,5 @@
+
+
 #[allow(unused_variables)]
 pub use irony::{self, preclude::*};
 
@@ -127,7 +129,7 @@ irony::op_def! {
                     let output_types = uses[0].1.iter().map(|id| {
                         format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.outputs {}: {}", outputs, output_types)
+                    format!("hw.output {}: {}", outputs, output_types)
                 }
             )
         },
@@ -169,8 +171,12 @@ irony::op_def! {
             attrs: [attrs: ArrayAttr(ArrayAttr)],
             constraints: [SameTypeAggregate::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let attrs = irony::utils::extract_vec(&attrs, "attrs").unwrap();
+                    let name = format!("{}", env.print_entity(defs[0].1[0].unwrap()));
+                    let types = format!("{}", env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap());
+                    let values = attrs.print_for_aggregate_constant(env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap());
+                    format!("{} = hw.aggregate_constant {} : {}", name, values, types)
                 }
             )
         },
@@ -180,8 +186,15 @@ irony::op_def! {
             uses: [; operands],
             constraints: [ArrayConcatConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let rst = env.print_entity(defs[0].1[0].unwrap());
+                    let operands = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let sub_typs = uses[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = hw.array_concat {} : {}", rst, operands, sub_typs)
                 }
             )
         },
@@ -191,8 +204,13 @@ irony::op_def! {
             uses: [; operands],
             constraints: [ArrayCreateConstraint::default().into(), SameTypeOperands::new().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let rst = env.print_entity(defs[0].1[0].unwrap());
+                    let operands = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let sub_typ = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.array_create {} : {}", rst, operands, sub_typ)
                 }
             )
         },
@@ -202,8 +220,13 @@ irony::op_def! {
             uses: [array, index],
             constraints: [ArrayGetConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let rst = env.print_entity(defs[0].1[0].unwrap());
+                    let array = env.print_entity(uses[0].1[0].unwrap());
+                    let index = env.print_entity(uses[1].1[0].unwrap());
+                    let array_typ = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    let index_typ = env.get_entity(uses[1].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.array_get {}[{}] : {}, {}", rst, array, index, array_typ, index_typ)
                 }
             )
         },
@@ -213,8 +236,13 @@ irony::op_def! {
             uses: [array, index],
             constraints: [ArraySliceConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let rst = env.print_entity(defs[0].1[0].unwrap());
+                    let array = env.print_entity(uses[0].1[0].unwrap());
+                    let index = env.print_entity(uses[1].1[0].unwrap());
+                    let old_typ = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    let new_typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.array_slice {}[{}] : ({}) -> {}", rst, array, index, old_typ, new_typ)
                 }
             )
         },
