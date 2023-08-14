@@ -19,6 +19,13 @@ pub trait Environ: Sized {
     fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
     fn get_entity_entry(&mut self , entity_id: EntityId) -> indexmap::map::Entry<usize, Self::EntityT>;
 
+    fn update_entity_attr<F>(&mut self, entity_id: EntityId, field_name: &str, f: F) -> ()
+    where F: Fn(Self::AttributeT) -> Self::AttributeT {
+        self.get_entity_entry(entity_id).and_modify(|entity| {
+            entity.update_attrs(field_name, f)
+        });
+    }
+
     fn get_op(&self, id: OpId) -> &Self::OpT;
     fn get_op_entry(&mut self , op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
 

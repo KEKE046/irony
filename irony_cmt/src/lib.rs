@@ -73,11 +73,11 @@ irony::op_def! {
         HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
-            attrs: [target_id: UIntAttr(UIntAttr), name: StringAttr(StringAttr)],
+            attrs: [target_id: IdAttr(IdAttr), name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let AttributeEnum::UIntAttr(target_id) = irony::utils::extract_vec(&attrs, "target_id").unwrap() else { panic!("")};
+                    let AttributeEnum::IdAttr(target_id) = irony::utils::extract_vec(&attrs, "target_id").unwrap() else { panic!("")};
                     let module_attrs = env.get_op(env.get_entity(EntityId(target_id.0 as usize)).get_defs(env)[0]).get_attrs();
                     let AttributeEnum::StringAttr(instance_name) = irony::utils::extract_vec(&attrs, "name").unwrap() else { panic!("")};
 
@@ -443,7 +443,7 @@ irony::op_def! {
         SeqRead: {
             defs: [rdata],
             uses: [mem, renable; address],
-            attrs: [latency: UIntAttr(UIntAttr)],
+            attrs: [latency: IdAttr(IdAttr)],
             print: (
                 |_, _, _, _, _| {
                     format!("")
@@ -454,7 +454,7 @@ irony::op_def! {
         SeqWrite: {
             defs: [],
             uses: [mem, wenable, wdata; address],
-            attrs: [latency: UIntAttr(UIntAttr)],
+            attrs: [latency: IdAttr(IdAttr)],
             print: (
                 |_, _, _, _, _| {
                     format!("")

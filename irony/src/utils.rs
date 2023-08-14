@@ -14,6 +14,9 @@ pub mod print {
     pub fn tab(lines: String) -> String {
         lines.lines().map(|line| format!("\t{}\n", line)).collect()
     }
+    pub fn from_bits_to_str(bits: Vec<bool>) -> String {
+        bits.iter().map(|bit| if *bit { "1" } else { "0" }).collect()
+    }
 }
 
 pub mod arith {
@@ -23,6 +26,16 @@ pub mod arith {
             sum += (*bit as u32) << (i as u32);
         }
         sum
+    }
+
+    pub fn from_u32_to_bits(val: u32) -> Vec<bool> {
+        let mut bits: Vec<bool> = Vec::new();
+        let mut val = val;
+        while val > 0 {
+            bits.push(val % 2 == 1);
+            val /= 2;
+        }
+        bits
     }
 
 }

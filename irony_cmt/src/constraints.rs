@@ -27,8 +27,8 @@ irony::constraint_def! {
         InstanceConstraint(InstanceConstraint ,
             |env: &E, attrs, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
             let target_id = irony::utils::extract_vec(&attrs, "target_id");
-            let Some(AttributeEnum::UIntAttr(target_id)) = target_id else {
-                panic!("target_id must be a UIntAttr")
+            let Some(AttributeEnum::IdAttr(target_id)) = target_id else {
+                panic!("target_id must be a IdAttr")
             };
             
             let target = env.get_entity(EntityId(target_id.0 as usize));

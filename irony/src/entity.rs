@@ -15,6 +15,18 @@ pub trait Entity: Id {
     fn set_parent(&mut self, parent: Option<RegionId>);
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
     fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>); 
+
+    fn update_attrs<F>(&mut self, name: &str, f:F) -> ()
+    where F: Fn(Self::AttributeT) -> Self::AttributeT {
+        let updated_attrs: Vec<_> = self.get_attrs().iter().map(|(attr_name, attr)| {
+            if attr_name == name {
+                (attr_name.to_owned(), f(attr.to_owned()))
+            } else {
+                (attr_name.to_owned(), attr.to_owned())
+            }
+        }).collect();
+        self.set_attrs(updated_attrs)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]

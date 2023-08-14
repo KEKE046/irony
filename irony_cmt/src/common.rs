@@ -1,9 +1,8 @@
-
+use irony::utils;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UIntType(pub usize);
 
-// TODO: fix this
 impl std::fmt::Display for UIntType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "i{}", self.0)
@@ -11,9 +10,7 @@ impl std::fmt::Display for UIntType {
 }
 
 impl Into<UIntType> for usize {
-    fn into(self) -> UIntType {
-        UIntType(self)
-    }
+    fn into(self) -> UIntType { UIntType(self) }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -21,8 +18,16 @@ pub struct StructType(pub Vec<(String, Box<DataTypeEnum>)>);
 
 // TODO: fix this
 impl std::fmt::Display for StructType {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "hw.struct<{}>",
+            self.0
+                .iter()
+                .map(|(field, ty)| format!("{}: {}", field, ty))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
@@ -31,8 +36,8 @@ pub struct ArrayType(pub Box<DataTypeEnum>, pub usize);
 
 // TODO: fix this
 impl std::fmt::Display for ArrayType {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "!hw.array<{}*{}>", self.1, self.0)
     }
 }
 
@@ -41,9 +46,7 @@ pub struct UArrayType(pub Box<DataTypeEnum>, pub usize);
 
 // TODO: fix this
 impl std::fmt::Display for UArrayType {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -51,11 +54,8 @@ pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
 
 // TODO: fix this
 impl std::fmt::Display for SeqHlmemType {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
 }
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CombVariadicPredicate {
@@ -65,7 +65,6 @@ pub enum CombVariadicPredicate {
     Or,
     Xor,
 }
-
 
 impl CombVariadicPredicate {
     pub fn get_str(&self) -> &'static str {
@@ -85,11 +84,10 @@ impl std::fmt::Display for CombVariadicPredicate {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum CombUnaryPredicate {
     Not,
-    Neg, 
+    Neg,
 }
 
 impl CombUnaryPredicate {
@@ -158,7 +156,6 @@ pub enum CombICmpPredicate {
     WNE,
 }
 
-
 impl CombICmpPredicate {
     pub fn get_str(&self) -> &'static str {
         match self {
@@ -189,17 +186,12 @@ impl std::fmt::Display for CombICmpPredicate {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StringAttr(pub String);
 
-
 impl Into<StringAttr> for &str {
-    fn into(self) -> StringAttr {
-        StringAttr(self.to_string())
-    }
+    fn into(self) -> StringAttr { StringAttr(self.to_string()) }
 }
 
 impl Into<StringAttr> for String {
-    fn into(self) -> StringAttr {
-        StringAttr(self)
-    }
+    fn into(self) -> StringAttr { StringAttr(self) }
 }
 
 impl std::fmt::Display for StringAttr {
@@ -212,9 +204,7 @@ impl std::fmt::Display for StringAttr {
 pub struct BoolAttr(pub bool);
 
 impl Into<BoolAttr> for bool {
-    fn into(self) -> BoolAttr {
-        BoolAttr(self)
-    }
+    fn into(self) -> BoolAttr { BoolAttr(self) }
 }
 
 impl std::fmt::Display for BoolAttr {
@@ -223,23 +213,17 @@ impl std::fmt::Display for BoolAttr {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
-pub struct UIntAttr(pub u32);
+pub struct IdAttr(pub usize);
 
-
-impl Into<UIntAttr> for u32 {
-    fn into(self) -> UIntAttr {
-        UIntAttr(self)
-    }
+impl Into<IdAttr> for u32 {
+    fn into(self) -> IdAttr { IdAttr(self as usize) }
 }
-impl Into<UIntAttr> for usize {
-    fn into(self) -> UIntAttr {
-        UIntAttr(self as u32)
-    }
+impl Into<IdAttr> for usize {
+    fn into(self) -> IdAttr { IdAttr(self) }
 }
 
-impl std::fmt::Display for UIntAttr {
+impl std::fmt::Display for IdAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -258,14 +242,10 @@ impl std::fmt::Display for TypeAttr {
 pub struct ConstantAttr(pub Vec<bool>);
 impl std::fmt::Display for ConstantAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-        for b in &self.0 {
-            s.push_str(if *b { "1" } else { "0" });
-        }
-        write!(f, "{}", s)
+        write!(f, "{}", utils::print::from_bits_to_str(self.0.to_owned()))
     }
 }
-impl<const N:usize> Into<ConstantAttr> for [u32;N] {
+impl<const N: usize> Into<ConstantAttr> for [u32; N] {
     fn into(self) -> ConstantAttr {
         let mut v = Vec::new();
         for i in 0..N {
@@ -274,6 +254,15 @@ impl<const N:usize> Into<ConstantAttr> for [u32;N] {
         ConstantAttr(v)
     }
 }
+
+impl Into<ConstantAttr> for u32 {
+    fn into(self) -> ConstantAttr { ConstantAttr(utils::arith::from_u32_to_bits(self)) }
+}
+impl Into<ConstantAttr> for usize {
+    fn into(self) -> ConstantAttr { ConstantAttr(utils::arith::from_u32_to_bits(self as u32)) }
+}
+
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
@@ -287,17 +276,12 @@ impl std::fmt::Display for ArrayAttr {
     }
 }
 
-
 impl<I: Into<AttributeEnum>> Into<ArrayAttr> for Vec<I> {
-    fn into(self) -> ArrayAttr {
-        ArrayAttr(self.into_iter().map(|x| x.into()).collect())
-    }
+    fn into(self) -> ArrayAttr { ArrayAttr(self.into_iter().map(|x| x.into()).collect()) }
 }
 
 impl Into<ArrayAttr> for () {
-    fn into(self) -> ArrayAttr {
-        ArrayAttr(Vec::<AttributeEnum>::new())
-    }
+    fn into(self) -> ArrayAttr { ArrayAttr(Vec::<AttributeEnum>::new()) }
 }
 
 irony::data_type_enum![
@@ -315,12 +299,12 @@ irony::attribute_enum! {
     AttributeEnum = {
         ConstantAttr(ConstantAttr),
         BoolAttr(BoolAttr),
-        UIntAttr(UIntAttr), 
-        StringAttr(StringAttr), 
-        TypeAttr(TypeAttr), 
-        ArrayAttr(ArrayAttr), 
-        CombVariadicPredicate(CombVariadicPredicate), 
-        CombBinaryPredicate(CombBinaryPredicate), 
+        IdAttr(IdAttr),
+        StringAttr(StringAttr),
+        TypeAttr(TypeAttr),
+        ArrayAttr(ArrayAttr),
+        CombVariadicPredicate(CombVariadicPredicate),
+        CombBinaryPredicate(CombBinaryPredicate),
         CombUnaryPredicate(CombUnaryPredicate),
         CombICmpPredicate(CombICmpPredicate)
     }

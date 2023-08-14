@@ -64,7 +64,7 @@ mod hw_test {
                 HwInstance::new(
                     vec![b],
                     vec![a],
-                    Some(UIntAttr(module_pass.id() as u32)),
+                    Some(IdAttr(module_pass.id() as usize)),
                     Some(StringAttr("pass_inst".into())),
                 )
                 .into(),
@@ -224,7 +224,7 @@ mod hw_test {
                 HwInstance::new(
                     vec![b],
                     vec![a],
-                    Some(UIntAttr(module_pass.id() as u32)),
+                    Some(IdAttr(module_pass.id() as usize)),
                     Some(StringAttr("pass_inst".into())),
                 )
                 .into(),
