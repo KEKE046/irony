@@ -21,7 +21,7 @@ impl std::fmt::Display for StructType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "hw.struct<{}>",
+            "!hw.struct<{}>",
             self.0
                 .iter()
                 .map(|(field, ty)| format!("{}: {}", field, ty))
@@ -343,5 +343,19 @@ irony::attribute_enum! {
         CombBinaryPredicate(CombBinaryPredicate),
         CombUnaryPredicate(CombUnaryPredicate),
         CombICmpPredicate(CombICmpPredicate)
+    }
+}
+
+
+impl DataTypeEnum {
+    pub fn width(&self) -> usize {
+        match self {
+            DataTypeEnum::UInt(UIntType(width)) => *width,
+            DataTypeEnum::Array(ArrayType(boxed, size)) => boxed.width() * size,
+            DataTypeEnum::Struct(StructType(v_field_type)) => {
+                v_field_type.iter().map(|(_, dtype)| dtype.width()).sum()
+            },
+            _ => unimplemented!()
+        }
     }
 }

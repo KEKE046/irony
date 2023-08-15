@@ -138,8 +138,13 @@ irony::op_def! {
             defs: [lhs],
             uses: [rhs],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    let rhs_typ = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    let lhs_typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+
+                    format!("{} = hw.bitcast {}: ({}) -> {}", lhs, rhs, rhs_typ, lhs_typ)
                 }
             )
         },
@@ -252,30 +257,47 @@ irony::op_def! {
             uses: [; operands],
             constraints: [StructCreateConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let operands = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let lhs_ty = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.struct_create ({}) : {}", lhs, operands, lhs_ty)
                 }
             )
         },
 
         HwStructExtract: {
             defs: [lhs],
-            uses: [struct_input, field],
+            uses: [struct_input],
+            attrs: [field: StringAttr(StringAttr)],
             constraints: [StructExtractConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let struct_input = env.print_entity(uses[0].1[0].unwrap());
+                    let field = irony::utils::extract_vec(&attrs, "field").unwrap();
+                    let struct_ty = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.struct_extract {}[\"{}\"] : {}", lhs, struct_input, field, struct_ty)
                 }
             )
         },
 
         HwStructInject: {
             defs: [lhs],
-            uses: [struct_input, field, new_value],
+            uses: [struct_input, new_value],
+            attrs: [field: StringAttr(StringAttr)],
             constraints: [StructInjectConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let struct_input = env.print_entity(uses[0].1[0].unwrap());
+                    let new_value = env.print_entity(uses[1].1[0].unwrap());
+                    let field = irony::utils::extract_vec(&attrs, "field").unwrap();
+                    let struct_ty = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.struct_inject {}[\"{}\"], {} : {}", lhs, struct_input, field, new_value, struct_ty)
                 }
             )
         },
@@ -285,8 +307,14 @@ irony::op_def! {
             uses: [struct_input],
             constraints: [StructExplodeConstraint::default().into()],
             print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let outputs = defs[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let struct_input = env.print_entity(uses[0].1[0].unwrap());
+                    let struct_ty = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    
+                    format!("{} = hw.struct_explode {} : {}", outputs, struct_input, struct_ty)
                 }
             )
         },
