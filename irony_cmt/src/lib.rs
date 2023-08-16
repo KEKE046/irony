@@ -37,7 +37,11 @@ irony::op_def! {
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs:Vec<(String, Vec<Option<EntityId>>)>, _ | {
-                    format!("{} = {}", env.print_entity(defs[0].1[0].unwrap()), env.print_entity(uses[0].1[0].unwrap()))
+                    // format!("{} = {}", env.print_entity(defs[0].1[0].unwrap()), env.print_entity(uses[0].1[0].unwrap()))
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = hw.wire {} : {}", lhs, rhs, typ)
                 }
             )
         },
