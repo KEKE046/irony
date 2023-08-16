@@ -148,7 +148,7 @@ macro_rules! entity_def_one {
             pub id: usize,
             pub parent: Option<irony::RegionId>,
             pub dtype: Option<$data_type>,
-            $($(pub $attr: Option<$attr_ty>,)*)?
+            $($(pub $attr: Option<$attr_inner_ty>,)*)?
         }
 
         impl irony::Entity for $name {
