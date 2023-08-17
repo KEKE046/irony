@@ -1,26 +1,38 @@
-use crate::{Region, RegionId, OpPrinterTrait, Id};
-
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
 use super::operation::{Op, OpId};
+use crate::{Id, OpPrinterTrait, Region, RegionId};
 
 pub trait Environ: Sized {
     type DataTypeT;
-    type AttributeT: Clone+PartialEq+std::fmt::Display;
+    type AttributeT: Clone + PartialEq + std::fmt::Display;
 
     type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
     type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type ConstraintT: ConstraintTrait<AttributeT = Self::AttributeT, DataTypeT = Self::DataTypeT>;
+    type ConstraintT: ConstraintTrait<
+        AttributeT = Self::AttributeT,
+        DataTypeT = Self::DataTypeT,
+    >;
 
     fn get_defs(&self, id: EntityId) -> Vec<OpId>;
     fn get_uses(&self, id: EntityId) -> Vec<OpId>;
     fn get_entity(&self, id: EntityId) -> &Self::EntityT;
     fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
     fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
-    fn get_entity_entry(&mut self , entity_id: EntityId) -> indexmap::map::Entry<usize, Self::EntityT>;
+    fn get_entity_entry(
+        &mut self, entity_id: EntityId,
+    ) -> indexmap::map::Entry<usize, Self::EntityT>;
+
+    fn update_entity_attr<F>(
+        &mut self, entity_id: EntityId, field_name: &str, f: F,
+    ) -> ()
+    where F: Fn(Self::AttributeT) -> Self::AttributeT {
+        self.get_entity_entry(entity_id)
+            .and_modify(|entity| entity.update_attrs(field_name, f));
+    }
 
     fn get_op(&self, id: OpId) -> &Self::OpT;
-    fn get_op_entry(&mut self , op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
+    fn get_op_entry(&mut self, op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
 
     fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
     fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
@@ -31,9 +43,11 @@ pub trait Environ: Sized {
     fn set_op_parent(&mut self, id: OpId);
     fn get_region_use(&self, region: RegionId) -> Option<OpId>;
     fn begin_region(&mut self, region: Option<RegionId>);
-    fn end_region(&mut self);
+    fn end_region(&mut self) -> Option<Option<RegionId>>;
 
-    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(&mut self, parent: Option<RegionId>, f: F);
+    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(
+        &mut self, parent: Option<RegionId>, f: F,
+    );
     fn verify_op(&self, op: OpId) -> bool {
         let op = self.get_op(op);
         let constraints = op.get_constraints();
@@ -68,9 +82,8 @@ pub trait Environ: Sized {
         let entity = self.get_entity(entity);
         let attrs = entity.get_attrs();
         if let Some(name) = crate::utils::extract_vec(&attrs, "name") {
-            format!("%{}", name)   
-        }
-        else {
+            format!("%{}", name)
+        } else {
             format!("%{}", entity.id())
         }
     }
@@ -80,13 +93,13 @@ pub trait Environ: Sized {
         let mut ops = vec![];
 
         for op in region.op_children.iter() {
-            ops.push(format!("{}",self.print_op(*op)));
+            ops.push(format!("{}", self.print_op(*op)));
         }
         format!("{{\n{}\n}}", crate::utils::print::tab(ops.join("\n")))
     }
 
     fn dump(&self) -> String;
-    
+
     fn run_passes(&mut self) -> Result<(), ()>; // -> ???
 }
 
@@ -229,7 +242,7 @@ macro_rules! environ_def {
                     ),
                 }
             }
-            
+
             fn get_op_entry(&mut self, op_id: irony::OpId) -> indexmap::map::Entry<usize, Self::OpT> {
                 self.op_table.entry(op_id.id())
             }
@@ -308,8 +321,8 @@ macro_rules! environ_def {
             fn begin_region(&mut self, region: Option<irony::RegionId>) {
                 self.parent_stack.push(region);
             }
-            fn end_region(&mut self) {
-                self.parent_stack.pop();
+            fn end_region(&mut self) -> Option<Option<RegionId>> {
+                self.parent_stack.pop()
             }
 
             fn dump(&self) -> String {

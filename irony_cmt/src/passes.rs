@@ -45,8 +45,11 @@ impl PassTrait<(), ()> for RenamePass {
         // Change the name of the module by appending it with "_id"
         env.get_op_entry(op_id).and_modify(|op| {
             if let OpEnum::HwModule(mod_def) = op {
-                mod_def.name =
-                    Some(StringAttr(format!("{}_{}", mod_def.name.as_ref().unwrap(), mod_def.id)));
+                mod_def.name = Some(StringAttr(format!(
+                    "{}_{}",
+                    mod_def.name.as_ref().unwrap(),
+                    mod_def.id
+                )));
                 mod_def.arg_names = Some(arg_names);
                 // mod_def.output_names = Some(output_names);
             }
@@ -143,7 +146,9 @@ impl PassManagerTrait<(), ()> for PassManager {
     type OpT = OpEnum;
     type PassT = PassEnum;
 
-    fn add_passes(&mut self, mut passes: Vec<Self::PassT>, mut start_ops: Vec<Vec<OpId>>) {
+    fn add_passes(
+        &mut self, mut passes: Vec<Self::PassT>, mut start_ops: Vec<Vec<OpId>>,
+    ) {
         assert_eq!(passes.len(), start_ops.len());
         self.passes.append(&mut passes);
         self.start_ops.append(&mut start_ops);

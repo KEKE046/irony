@@ -1,4 +1,6 @@
-use std::{hash::{BuildHasher, Hash, Hasher}, ops::{DerefMut, Deref}, fmt::Debug};
+use std::fmt::Debug;
+use std::hash::{BuildHasher, Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 
 pub type FxHasher = std::hash::BuildHasherDefault<rustc_hash::FxHasher>;
 pub type FxIndexSet<K> = indexmap::IndexSet<K, FxHasher>;
@@ -31,27 +33,19 @@ impl<V> Default for FxMapWithUniqueId<V> {
 impl<V> Deref for FxMapWithUniqueId<V> {
     type Target = FxIndexMap<usize, V>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.indexmap
-    }
+    fn deref(&self) -> &Self::Target { &self.indexmap }
 }
 
 impl<V> DerefMut for FxMapWithUniqueId<V> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.indexmap
-    }
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.indexmap }
 }
 
 impl<V> FxMapWithUniqueId<V>
-where
-    V: PartialEq + Debug + super::Id,
+where V: PartialEq + Debug + super::Id
 {
-    pub fn get_map(&self) -> &FxIndexMap<usize, V> {
-        &self.indexmap
-    }
-    pub fn get_map_mut(&mut self) -> &mut FxIndexMap<usize, V> {
-        &mut self.indexmap
-    }
+    pub fn get_map(&self) -> &FxIndexMap<usize, V> { &self.indexmap }
+
+    pub fn get_map_mut(&mut self) -> &mut FxIndexMap<usize, V> { &mut self.indexmap }
 
     pub fn insert_with_id<'a, 't: 'a>(&'t mut self, mut value: V) -> (usize, &'a V) {
         let cur_id = self.next_id;
@@ -65,4 +59,3 @@ where
         (cur_id, self.indexmap.get(&cur_id).unwrap())
     }
 }
-

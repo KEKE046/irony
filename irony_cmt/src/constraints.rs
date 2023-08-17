@@ -1,6 +1,5 @@
 use irony::{EntityId, Op};
 
-
 use super::{AttributeEnum, DataTypeEnum};
 
 pub type SameType = irony::SameTypeConstraint<DataTypeEnum, AttributeEnum>;
@@ -17,7 +16,7 @@ irony::constraint_def! {
             let region = regions[0].1;
 
             // TODO: check arg_names and arg_types have the same length
-            
+
             // TODO: check output_namesa and output_types have the same length
 
             irony::utils::extract_vec(&attrs, "arg_names") == super::utils::extract_input_names(env, region) &&
@@ -27,22 +26,22 @@ irony::constraint_def! {
         InstanceConstraint(InstanceConstraint ,
             |env: &E, attrs, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
             let target_id = irony::utils::extract_vec(&attrs, "target_id");
-            let Some(AttributeEnum::UIntAttr(target_id)) = target_id else {
-                panic!("target_id must be a UIntAttr")
+            let Some(AttributeEnum::IdAttr(target_id)) = target_id else {
+                panic!("target_id must be a IdAttr")
             };
-            
+
             let target = env.get_entity(EntityId(target_id.0 as usize));
             assert!(target.get_defs(env).len() == 1);
             let target_def = target.get_defs(env)[0];
             let (_, target_region) = env.get_op(target_def).get_regions()[0];
 
             super::utils::extract_input_types(env, target_region) == super::utils::extract_types(env, uses[0].1.to_owned())
-            && 
+            &&
             super::utils::extract_output_types(env, target_region) == super::utils::extract_types(env, defs[0].1.to_owned())
 
         }),
 
-        SameTypeConstant(SameTypeConstant, 
+        SameTypeConstant(SameTypeConstant,
             |_, _, _, _, _|  {
                 true
         }),

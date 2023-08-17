@@ -7,12 +7,17 @@ use super::entity::EntityId;
 use crate::printer::OpPrinterTrait;
 use crate::{ConstraintTrait, RegionId};
 
-
 pub trait Op: Id + Debug {
     type DataTypeT;
     type AttributeT;
-    type ConstraintT: ConstraintTrait<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type PrinterT: OpPrinterTrait<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
+    type ConstraintT: ConstraintTrait<
+        DataTypeT = Self::DataTypeT,
+        AttributeT = Self::AttributeT,
+    >;
+    type PrinterT: OpPrinterTrait<
+        DataTypeT = Self::DataTypeT,
+        AttributeT = Self::AttributeT,
+    >;
 
     fn get_defs(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
     fn get_uses(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
@@ -149,7 +154,7 @@ macro_rules! op_def_one {
             fn get_uses(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 vec![
                     $((format!("{}", stringify!($use)), vec![self.$use.to_owned()]),)*
-                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned().into_iter().map(|x| Some(x)).collect()))*)?
+                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned().into_iter().map(|x| Some(x)).collect())),*)?
                 ]
 
             }
@@ -336,7 +341,7 @@ macro_rules! op_enum {
                     $($name::$variant(inner) => inner.set_attrs(attrs)),*
                 }
             }
-            
+
             fn get_constraints(&self) -> Vec<Self::ConstraintT> {
                 match self {
                     $($name::$variant(inner) => inner.get_constraints()),*
