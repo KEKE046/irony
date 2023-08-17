@@ -1,11 +1,10 @@
-
 use super::common::Id;
 use super::environ::Environ;
 use super::operation::OpId;
 
 pub trait Entity: Id {
     type DataTypeT;
-    type AttributeT: Clone+PartialEq+std::fmt::Display;
+    type AttributeT: Clone + PartialEq + std::fmt::Display;
     fn get_dtype(&self) -> Option<Self::DataTypeT>;
 
     fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;
@@ -14,17 +13,21 @@ pub trait Entity: Id {
     fn get_parent(&self) -> Option<RegionId>;
     fn set_parent(&mut self, parent: Option<RegionId>);
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
-    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>); 
+    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>);
 
-    fn update_attrs<F>(&mut self, name: &str, f:F) -> ()
+    fn update_attrs<F>(&mut self, name: &str, f: F) -> ()
     where F: Fn(Self::AttributeT) -> Self::AttributeT {
-        let updated_attrs: Vec<_> = self.get_attrs().iter().map(|(attr_name, attr)| {
-            if attr_name == name {
-                (attr_name.to_owned(), f(attr.to_owned()))
-            } else {
-                (attr_name.to_owned(), attr.to_owned())
-            }
-        }).collect();
+        let updated_attrs: Vec<_> = self
+            .get_attrs()
+            .iter()
+            .map(|(attr_name, attr)| {
+                if attr_name == name {
+                    (attr_name.to_owned(), f(attr.to_owned()))
+                } else {
+                    (attr_name.to_owned(), attr.to_owned())
+                }
+            })
+            .collect();
         self.set_attrs(updated_attrs)
     }
 }
@@ -33,24 +36,18 @@ pub trait Entity: Id {
 pub struct EntityId(pub usize);
 
 impl From<usize> for EntityId {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
+    fn from(value: usize) -> Self { Self(value) }
 }
 impl Id for EntityId {
-    fn id(&self) -> usize {
-        self.0
-    }
-    fn set_id(&mut self, id: usize) {
-        self.0 = id
-    }
+    fn id(&self) -> usize { self.0 }
+
+    fn set_id(&mut self, id: usize) { self.0 = id }
 }
 
 impl EntityId {
-    pub fn get<'env: 't, 't, E>(&'t self, env: &'env E) -> &'t E::EntityT 
-    where E: Environ{
+    pub fn get<'env: 't, 't, E>(&'t self, env: &'env E) -> &'t E::EntityT
+    where E: Environ {
         env.get_entity(self.to_owned())
-
     }
 }
 
@@ -62,36 +59,25 @@ pub struct Region {
 }
 
 impl Id for Region {
-    fn id(&self) -> usize {
-        self.id
-    }
-    fn set_id(&mut self, id: usize) {
-        self.id = id
-    }
-}
+    fn id(&self) -> usize { self.id }
 
+    fn set_id(&mut self, id: usize) { self.id = id }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RegionId(pub usize);
 impl Id for RegionId {
-    fn id(&self) -> usize {
-        self.0
-    }
+    fn id(&self) -> usize { self.0 }
 
-    fn set_id(&mut self, id: usize) {
-        self.0 = id
-    }
+    fn set_id(&mut self, id: usize) { self.0 = id }
 }
 
 impl Region {
-
     pub fn get_use<E: Environ>(&self, env: &E) -> Option<OpId> {
         env.get_region_use(self.as_id())
     }
 
-    pub fn as_id(&self) -> RegionId {
-        RegionId(self.id)
-    }
+    pub fn as_id(&self) -> RegionId { RegionId(self.id) }
 
     pub fn new() -> Self {
         Self {
@@ -102,7 +88,9 @@ impl Region {
     }
 
     pub fn add_op_child(&mut self, op: OpId) {
-        if let Some(_) = self.op_children.iter().find(|&op_exist| op_exist.id() == op.id()) {
+        if let Some(_) =
+            self.op_children.iter().find(|&op_exist| op_exist.id() == op.id())
+        {
             panic!("{} has already been in the op_children of {}\n", op.id(), self.id())
         } else {
             self.op_children.push(op)
@@ -110,8 +98,16 @@ impl Region {
     }
 
     pub fn add_entity_child(&mut self, entity: EntityId) {
-        if let Some(_) = self.entity_children.iter().find(|&entity_exist| entity_exist.id() == entity.id()) {
-            panic!("{} has already been in the entity_children of {}", entity.id(), self.id())
+        if let Some(_) = self
+            .entity_children
+            .iter()
+            .find(|&entity_exist| entity_exist.id() == entity.id())
+        {
+            panic!(
+                "{} has already been in the entity_children of {}",
+                entity.id(),
+                self.id()
+            )
         } else {
             self.entity_children.push(entity)
         }
@@ -121,7 +117,7 @@ impl Region {
 #[macro_export]
 macro_rules! entity_def {
     (
-        [data_type = $data_type:ty, attr = $attr_ty:ty] 
+        [data_type = $data_type:ty, attr = $attr_ty:ty]
         $name_enum:ident = {
             $($name:ident $(: [$($attr:ident : $attr_variant:ident($attr_inner_ty:ty)),*])?),+
             $(,)?
@@ -211,6 +207,14 @@ macro_rules! entity_def_one {
         }
 
         impl $name {
+            pub const fn const_new (dtype: Option<$data_type>) -> Self {
+                Self {
+                    id: 0,
+                    dtype: dtype,
+                    parent: None,
+                    $($($attr: None),*)?
+                }
+            }
             pub fn new(dtype: Option<$data_type>, $($($attr: Option<$attr_inner_ty>),*)?) -> Self {
                 Self {
                     id: 0,
@@ -222,7 +226,7 @@ macro_rules! entity_def_one {
         }
     };
 
-   
+
 }
 
 #[macro_export]

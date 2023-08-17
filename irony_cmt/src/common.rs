@@ -259,10 +259,10 @@ impl Into<ConstantAttr> for u32 {
     fn into(self) -> ConstantAttr { ConstantAttr(utils::arith::from_u32_to_bits(self)) }
 }
 impl Into<ConstantAttr> for usize {
-    fn into(self) -> ConstantAttr { ConstantAttr(utils::arith::from_u32_to_bits(self as u32)) }
+    fn into(self) -> ConstantAttr {
+        ConstantAttr(utils::arith::from_u32_to_bits(self as u32))
+    }
 }
-
-
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
@@ -284,30 +284,37 @@ impl AttributeEnum {
                     panic!("no constant attr for uint")
                 };
                 format!("{} : {}", constant, uint)
-            }, 
+            },
             DataTypeEnum::Array(ArrayType(boxed, size)) => {
                 let AttributeEnum::ArrayAttr(ArrayAttr(array)) = self else {
                     panic!("no array attr for array")
                 };
                 assert!(array.len() == size);
 
-                let sub_strs = array.iter().map(|x| x.print_for_aggregate_constant(*boxed.to_owned())).collect::<Vec<_>>();
+                let sub_strs = array
+                    .iter()
+                    .map(|x| x.print_for_aggregate_constant(*boxed.to_owned()))
+                    .collect::<Vec<_>>();
                 format!("[{}]", sub_strs.join(", "))
             },
-            
+
             DataTypeEnum::Struct(StructType(v_field_type)) => {
                 let AttributeEnum::ArrayAttr(ArrayAttr(array)) = self else {
                     panic!("no array attr for struct")
                 };
-                
-                let sub_strs = v_field_type.iter().zip(array.iter()).map(|((_, dtype), attr)| {
-                    attr.print_for_aggregate_constant(*dtype.to_owned())
-                }).collect::<Vec<_>>();
+
+                let sub_strs = v_field_type
+                    .iter()
+                    .zip(array.iter())
+                    .map(|((_, dtype), attr)| {
+                        attr.print_for_aggregate_constant(*dtype.to_owned())
+                    })
+                    .collect::<Vec<_>>();
 
                 format!("[{}]", sub_strs.join(", "))
             },
-            
-            _ => unimplemented!()
+
+            _ => unimplemented!(),
         }
     }
 }
@@ -346,7 +353,6 @@ irony::attribute_enum! {
     }
 }
 
-
 impl DataTypeEnum {
     pub fn width(&self) -> usize {
         match self {
@@ -355,7 +361,7 @@ impl DataTypeEnum {
             DataTypeEnum::Struct(StructType(v_field_type)) => {
                 v_field_type.iter().map(|(_, dtype)| dtype.width()).sum()
             },
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }

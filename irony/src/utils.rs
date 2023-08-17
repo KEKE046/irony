@@ -1,13 +1,15 @@
-
-
-pub fn extract_vec<A: Clone+PartialEq>(v: &Vec<(String, A)>, field_name: &str) -> Option<A> {
-    v.iter().find_map(|(name, field)| {
-        if name == field_name {
-            Some(field.to_owned())
-        } else {
-            None
-        }
-    })
+pub fn extract_vec<A: Clone + PartialEq>(
+    v: &Vec<(String, A)>, field_name: &str,
+) -> Option<A> {
+    v.iter().find_map(
+        |(name, field)| {
+            if name == field_name {
+                Some(field.to_owned())
+            } else {
+                None
+            }
+        },
+    )
 }
 
 pub mod print {
@@ -37,5 +39,4 @@ pub mod arith {
         }
         bits
     }
-
 }

@@ -1,5 +1,3 @@
-
-
 #[allow(unused_variables)]
 pub use irony::{self, preclude::*};
 
@@ -10,9 +8,8 @@ mod passes;
 
 pub use common::*;
 pub use constraints::*;
-pub use passes::*;
-
 pub use indexmap;
+pub use passes::*;
 
 mod utils;
 
@@ -20,8 +17,11 @@ irony::entity_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum]
 
     EntityEnum = {
+        Invalid: [],
+        Todo: [],
         Wire: [name: StringAttr(StringAttr)],
         Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr)],
+
     }
 }
 
@@ -29,6 +29,57 @@ irony::op_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
+        // ------ BEGIN: define the operations in `temporary` dialect -------
+
+        Select: {
+            defs: [lhs],
+            uses: [default; conds, values],
+            attrs: [ onehot: BoolAttr(BoolAttr)],
+            constraints: [],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+
+                    let mode = if let AttributeEnum::BoolAttr(BoolAttr(x)) = irony::utils::extract_vec(&attrs, "onehot").unwrap() {
+                        if x {
+                            "onehot"
+                        } else {
+                            "priority"
+                        }
+                    } else {
+                        "priority"
+                    };
+
+                    let candidates = uses[2].1.iter().zip(uses[1].1.iter()).map(|(value, cond)| {
+                        format!("\t{} : {}", env.print_entity(cond.unwrap()), env.print_entity(value.unwrap()))
+                    }).collect::<Vec<_>>().join(", \n");
+
+                    let default = env.print_entity(uses[0].1[0].unwrap());
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = ILLEGAL.select {} {{\n{}\n\tdefault : {}\n}} : {}", lhs, mode, candidates, default, typ)
+                }
+            )
+        },
+
+        CombUnary: {
+            defs: [lhs],
+            uses: [op],
+            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
+            constraints: [SameType::new().into()],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let def = env.print_entity(defs[0].1[0].unwrap());
+                    let uses = vec![env.print_entity(uses[0].1[0].unwrap())].join(", ");
+                    let AttributeEnum::CombUnaryPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = ILLEGAL.{} {} : {}", def, predicate, uses, typ)
+                }
+            )
+        },
+
+        // ------ END: define the operations in `temporary` dialect -------
+
+
         // ------ BEGIN: define the operations in `hw` dialect -------
         Assign: {
             defs: [lhs],
@@ -45,9 +96,7 @@ irony::op_def! {
                 }
             )
         },
-        // ------ END: define the operations in `hw` dialect -------
 
-        // ------ BEGIN: define the operations in `hw` dialect -------
         HwModule: {
             defs: [lhs],
             uses: [],
@@ -317,7 +366,7 @@ irony::op_def! {
                     }).collect::<Vec<_>>().join(", ");
                     let struct_input = env.print_entity(uses[0].1[0].unwrap());
                     let struct_ty = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
-                    
+
                     format!("{} = hw.struct_explode {} : {}", outputs, struct_input, struct_ty)
                 }
             )
@@ -359,21 +408,7 @@ irony::op_def! {
                 }
             )
         },
-        CombUnary: {
-            defs: [lhs],
-            uses: [op],
-            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
-            constraints: [SameType::new().into()],
-            print: (
-                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let def = env.print_entity(defs[0].1[0].unwrap());
-                    let uses = vec![env.print_entity(uses[0].1[0].unwrap())].join(", ");
-                    let AttributeEnum::CombUnaryPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
-                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
-                    format!("{} = ILLEGAL.{} {} : {}", def, predicate, uses, typ)
-                }
-            )
-        },
+
         CombICmp: {
             defs: [lhs],
             uses: [op0, op1],

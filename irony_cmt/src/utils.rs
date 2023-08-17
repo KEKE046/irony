@@ -1,13 +1,9 @@
-use irony::{Entity, Environ, Op, EntityId};
+use irony::{Entity, EntityId, Environ, Op};
 
 use crate::{ArrayAttr, AttributeEnum, DataTypeEnum, TypeAttr};
 
 pub fn extract_attrs_for_region<E, EntityT, F, G>(
-    env: &E,
-    region_id: irony::RegionId,
-    op_name: &str,
-    f: F,
-    g: G,
+    env: &E, region_id: irony::RegionId, op_name: &str, f: F, g: G,
 ) -> Option<AttributeEnum>
 where
     E: irony::Environ<EntityT = EntityT>,
@@ -32,7 +28,7 @@ where
                 .filter(|&x| x.is_some())
                 .map(|x| {
                     let Some(x) = x else {panic!()};
-                   g(env, x)
+                    g(env, x)
                 })
                 .collect::<Vec<AttributeEnum>>();
             Some(input_attrs)
@@ -42,65 +38,85 @@ where
     Some(ArrayAttr(input_types).into())
 }
 
-pub fn extract_input_names<E, EntityT>(env: &E, region_id: irony::RegionId) -> Option<AttributeEnum>
-where
-    E: irony::Environ<EntityT = EntityT>,
-    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
-{
-    extract_attrs_for_region(env, region_id, "HwInput", |op: &<E as Environ>::OpT| {
-        op.get_defs()
-    }, |env: &E, x: &EntityId| {
-        let name = irony::utils::extract_vec(&env.get_entity(*x).get_attrs(), "name").unwrap();
-        name
-    })
-}
-
-pub fn extract_input_types<E, EntityT>(env: &E, region_id: irony::RegionId) -> Option<AttributeEnum>
-where
-    E: irony::Environ<EntityT = EntityT>,
-    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
-{
-    extract_attrs_for_region(env, region_id, "HwInput", |op: &<E as Environ>::OpT| {
-        op.get_defs()
-    }, |env: &E, x: &EntityId| {
-        let input = env.get_entity(*x);
-        let type_attr = TypeAttr(input.get_dtype().unwrap());
-        AttributeEnum::TypeAttr(type_attr)
-    })
-}
-
-pub fn extract_output_types<E, EntityT>(
-    env: &E,
-    region_id: irony::RegionId,
+pub fn extract_input_names<E, EntityT>(
+    env: &E, region_id: irony::RegionId,
 ) -> Option<AttributeEnum>
 where
     E: irony::Environ<EntityT = EntityT>,
-    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT =  AttributeEnum>,
+    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
 {
-    extract_attrs_for_region(env, region_id, "HwOutput", |op: &<E as Environ>::OpT| {
-        op.get_uses()
-    }, |env: &E, x: &EntityId| {
-        let input = env.get_entity(*x);
-        let type_attr = TypeAttr(input.get_dtype().unwrap());
-        AttributeEnum::TypeAttr(type_attr)
-    })
+    extract_attrs_for_region(
+        env,
+        region_id,
+        "HwInput",
+        |op: &<E as Environ>::OpT| op.get_defs(),
+        |env: &E, x: &EntityId| {
+            let name = irony::utils::extract_vec(&env.get_entity(*x).get_attrs(), "name")
+                .unwrap();
+            name
+        },
+    )
+}
+
+pub fn extract_input_types<E, EntityT>(
+    env: &E, region_id: irony::RegionId,
+) -> Option<AttributeEnum>
+where
+    E: irony::Environ<EntityT = EntityT>,
+    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
+{
+    extract_attrs_for_region(
+        env,
+        region_id,
+        "HwInput",
+        |op: &<E as Environ>::OpT| op.get_defs(),
+        |env: &E, x: &EntityId| {
+            let input = env.get_entity(*x);
+            let type_attr = TypeAttr(input.get_dtype().unwrap());
+            AttributeEnum::TypeAttr(type_attr)
+        },
+    )
+}
+
+pub fn extract_output_types<E, EntityT>(
+    env: &E, region_id: irony::RegionId,
+) -> Option<AttributeEnum>
+where
+    E: irony::Environ<EntityT = EntityT>,
+    EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
+{
+    extract_attrs_for_region(
+        env,
+        region_id,
+        "HwOutput",
+        |op: &<E as Environ>::OpT| op.get_uses(),
+        |env: &E, x: &EntityId| {
+            let input = env.get_entity(*x);
+            let type_attr = TypeAttr(input.get_dtype().unwrap());
+            AttributeEnum::TypeAttr(type_attr)
+        },
+    )
 }
 
 pub fn extract_types<E, EntityT>(
-    env: &E,
-    entities: Vec<Option<irony::EntityId>>,
+    env: &E, entities: Vec<Option<irony::EntityId>>,
 ) -> Option<AttributeEnum>
 where
     E: irony::Environ<EntityT = EntityT>,
     EntityT: Entity<DataTypeT = DataTypeEnum>,
 {
-    Some(ArrayAttr(entities
-        .into_iter()
-        .filter(|x| x.is_some())
-        .map(|x| {
-            let Some(x) = x else {panic!()};
-            let input = env.get_entity(x);
-            TypeAttr(input.get_dtype().unwrap()).into()
-        })
-        .collect::<Vec<AttributeEnum>>()).into())
+    Some(
+        ArrayAttr(
+            entities
+                .into_iter()
+                .filter(|x| x.is_some())
+                .map(|x| {
+                    let Some(x) = x else {panic!()};
+                    let input = env.get_entity(x);
+                    TypeAttr(input.get_dtype().unwrap()).into()
+                })
+                .collect::<Vec<AttributeEnum>>(),
+        )
+        .into(),
+    )
 }

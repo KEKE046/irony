@@ -28,7 +28,7 @@ impl<D: Clone> std::fmt::Display for ConstValueU32<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.value)
     }
-} 
+}
 
 #[macro_export]
 macro_rules! data_type_enum {
@@ -42,7 +42,7 @@ macro_rules! data_type_enum {
         pub enum $enum_name {
             $($variant($variant_ty)),*
         }
-        
+
         impl std::fmt::Display for $enum_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
