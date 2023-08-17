@@ -68,6 +68,9 @@ pub trait Environ: Sized {
     }
 
     fn print_op(&self, op: OpId) -> String {
+
+        self.verify_op(op);
+
         let op = self.get_op(op);
         let printer = op.get_printer();
         let attributes = op.get_attrs();
@@ -95,7 +98,7 @@ pub trait Environ: Sized {
         for op in region.op_children.iter() {
             ops.push(format!("{}", self.print_op(*op)));
         }
-        format!("{{\n{}\n}}", crate::utils::print::tab(ops.join("\n")))
+        format!("{}", crate::utils::print::tab(ops.join("\n")))
     }
 
     fn dump(&self) -> String;

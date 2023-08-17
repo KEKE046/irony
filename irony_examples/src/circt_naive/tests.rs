@@ -5,7 +5,7 @@ mod basics {
     fn build() -> Result<(),()> {
         let mut env = CirctEnv::default();
         let module = env.add_entity(Module::new(None, Some("default".into())).into());
-        let region = env.add_region(Region::new().into());
+        let region = env.add_region(Region::new(true).into());
         let module_def = env.add_op(ModuleDef::new(Some(module), Some(region)).into());
 
         env.with_region(Some(region), |env| {

@@ -31,6 +31,23 @@ irony::op_def! {
     OpEnum = {
         // ------ BEGIN: define the operations in `temporary` dialect -------
 
+        Guarded: {
+            defs: [],
+            uses: [cond],
+            constraints: [],
+            regions: [body],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, regions: Vec<(String, RegionId)>| {
+
+                    let cond = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("ILLEGAL.guarded ({}) {{\n{}}}", cond, env.print_region(regions[0].1))
+                }
+
+            )
+
+        },
+
         Select: {
             defs: [lhs],
             uses: [default; conds, values],
@@ -119,7 +136,7 @@ irony::op_def! {
                     let outputs = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
                         format!("{}: {}", name, ty)
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.module @{}({}) -> ({}) {}", name, args, outputs, env.print_region(regions[0].1))
+                    format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1))
                 }
             )
         },
@@ -563,6 +580,26 @@ irony::op_def! {
 irony::environ_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum, pm = PassManager]
     struct CmtEnv;
+}
+
+pub(crate) const INVALID: Invalid = Invalid::const_new(None);
+pub(crate) const HOLE: Todo = Todo::const_new(None);
+
+impl CmtEnv {
+    pub fn new() -> Self {
+        let mut this = Self::default();
+        this.add_entity(INVALID.into());
+        this.add_entity(HOLE.into());
+        
+        this.begin_region(None);
+        this
+    }
+}
+
+impl Drop for CmtEnv {
+    fn drop(&mut self) {
+        self.end_region();
+    }
 }
 
 #[cfg(test)]

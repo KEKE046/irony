@@ -51,9 +51,10 @@ impl EntityId {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Region {
     pub id: usize,
+    pub isolated: bool,
     pub op_children: Vec<OpId>,
     pub entity_children: Vec<EntityId>,
 }
@@ -79,9 +80,10 @@ impl Region {
 
     pub fn as_id(&self) -> RegionId { RegionId(self.id) }
 
-    pub fn new() -> Self {
+    pub fn new(isolated: bool) -> Self {
         Self {
             id: 0,
+            isolated,
             op_children: vec![],
             entity_children: vec![],
         }

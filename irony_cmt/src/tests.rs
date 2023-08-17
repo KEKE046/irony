@@ -10,7 +10,7 @@ mod hw_test {
 
         let module_pass =
             cmt.add_entity(Module::new(None, Some("Pass".into()), None).into());
-        let module_pass_body = cmt.add_region(Region::default());
+        let module_pass_body = cmt.add_region(Region::new(true));
         let module_pass_def = cmt.add_op(
             HwModule::new(
                 Some(module_pass),
@@ -37,7 +37,7 @@ mod hw_test {
 
         let module = cmt
             .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = cmt.add_region(Region::default());
+        let module_body = cmt.add_region(Region::new(true));
         let module_def = cmt.add_op(
             HwModule::new(
                 Some(module),
@@ -161,7 +161,7 @@ mod hw_test {
         let mut circt = CmtEnv::default();
         let module = circt
             .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = circt.add_region(Region::default());
+        let module_body = circt.add_region(Region::new(true));
         let module_def = circt.add_op(
             HwModule::new(
                 Some(module),
@@ -202,7 +202,7 @@ mod hw_test {
 
         let module_pass =
             circt.add_entity(Module::new(None, Some("Pass".into()), None).into());
-        let module_pass_body = circt.add_region(Region::default());
+        let module_pass_body = circt.add_region(Region::new(true));
         let module_pass_def = circt.add_op(
             HwModule::new(
                 Some(module_pass),
@@ -229,7 +229,7 @@ mod hw_test {
 
         let module = circt
             .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = circt.add_region(Region::default());
+        let module_body = circt.add_region(Region::new(true));
         circt.add_op(
             HwModule::new(
                 Some(module),
