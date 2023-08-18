@@ -70,8 +70,8 @@ irony::op_def! {
             uses: [],
             regions: [region],
             print: (
-                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, RegionId)>| {
-                    format!("module {:?} {{\n{}\n}}", defs[0].1, env.print_region(regions[0].1))
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, Vec<RegionId>)>| {
+                    format!("module {:?} {{\n{}\n}}", defs[0].1, env.print_region(regions[0].1[0]))
                 }
             )
         },

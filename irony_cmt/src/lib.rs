@@ -31,28 +31,51 @@ irony::op_def! {
     OpEnum = {
         // ------ BEGIN: define the operations in `temporary` dialect -------
 
-        Guarded: {
-            defs: [],
-            uses: [cond],
-            constraints: [],
-            regions: [body],
+        Cases: {
+            defs: [; results],
+            uses: [; conds],
+            attrs: [ onehot: BoolAttr(BoolAttr)],
+            regions: [dflt; bodies],
+            constraints: [/* TODO */],
             print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, regions: Vec<(String, RegionId)>| {
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, Vec<RegionId>)>| {
 
-                    let cond = env.print_entity(uses[0].1[0].unwrap());
+                    let results = defs[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
 
-                    format!("ILLEGAL.guarded ({}) {{\n{}}}", cond, env.print_region(regions[0].1))
+                    let mode = if let AttributeEnum::BoolAttr(BoolAttr(x)) = irony::utils::extract_vec(&attrs, "onehot").unwrap() {
+                        if x {
+                            "onehot"
+                        } else {
+                            "priority"
+                        }
+                    } else {
+                        "priority"
+                    };
+
+                    let cases = 
+                        uses[0].1.iter().zip(regions[1].1.iter()).map(|(cond, body)| {
+                            format!("{} : {{\n{}\n}}", env.print_entity(cond.unwrap()), env.print_region(*body))
+                        }).collect::<Vec<_>>().join(", \n");
+                    
+                    let default = 
+                        format!("default : {{\n{}\n}}", env.print_region(regions[0].1[0]));
+
+                    let res_typs = defs[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+
+                    format!("{} = cases {} {{\n{}\n{}\n}} : {}", results, mode, irony::utils::print::tab(cases), irony::utils::print::tab(default), res_typs)
                 }
-
             )
-
         },
 
         Select: {
             defs: [lhs],
             uses: [default; conds, values],
             attrs: [ onehot: BoolAttr(BoolAttr)],
-            constraints: [],
+            constraints: [/* TODO */],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
                     let lhs = env.print_entity(defs[0].1[0].unwrap());
@@ -118,10 +141,10 @@ irony::op_def! {
             defs: [lhs],
             uses: [],
             attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
-            constraints: [ModuleConstraint::default().into()],
             regions: [body],
+            constraints: [ModuleConstraint::default().into()],
             print: (
-                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, RegionId)>| {
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, Vec<RegionId>)>| {
                     let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&attrs, "arg_names").unwrap() else { panic!("")};
                     let AttributeEnum::ArrayAttr(arg_types) = irony::utils::extract_vec(&attrs, "arg_types").unwrap() else { panic!("")};
 
@@ -136,7 +159,7 @@ irony::op_def! {
                     let outputs = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
                         format!("{}: {}", name, ty)
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1))
+                    format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1[0]))
                 }
             )
         },

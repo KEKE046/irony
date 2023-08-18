@@ -22,7 +22,7 @@ impl PassTrait<(), ()> for RenamePass {
     where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
         let Some(AttributeEnum::ArrayAttr(arg_names)) = extract_attrs_for_region(
             env,
-            env.get_op(op_id).get_regions()[0].1,
+            env.get_op(op_id).get_regions()[0].1[0],
             "HwInput",
             |op: &<E as Environ>::OpT| op.get_defs(),
             |env: &E, x: &EntityId| {
@@ -33,7 +33,7 @@ impl PassTrait<(), ()> for RenamePass {
         ) else {panic!()};
         let Some(AttributeEnum::ArrayAttr(_output_names)) = extract_attrs_for_region(
             env,
-            env.get_op(op_id).get_regions()[0].1,
+            env.get_op(op_id).get_regions()[0].1[0],
             "HwOutput",
             |op: &<E as Environ>::OpT| op.get_uses(),
             |env: &E, x: &EntityId| {
@@ -58,7 +58,7 @@ impl PassTrait<(), ()> for RenamePass {
         let region_id = env.get_op(op_id).get_regions()[0].1.to_owned();
 
         // Run RenamePass on potential legal ops (with region, currently None)
-        let op_children = env.get_region(region_id).op_children.clone();
+        let op_children = env.get_region(region_id[0]).op_children.clone();
         for op_id in op_children.iter() {
             self.run_on(env, *op_id)?;
         }
@@ -85,7 +85,7 @@ impl PassTrait<(), ()> for RenamePass {
             });
         }
 
-        let entity_children = env.get_region(region_id).entity_children.clone();
+        let entity_children = env.get_region(region_id[0]).entity_children.clone();
         for entity_id in entity_children {
             env.get_entity_entry(entity_id).and_modify(|entity| {
                 let attrs = entity

@@ -10,7 +10,8 @@ pub trait ConstraintTrait {
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, RegionId)>,
+        defs: Vec<(String, Vec<Option<EntityId>>)>, 
+        regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -29,7 +30,7 @@ impl<D: PartialEq, A: Clone + PartialEq> ConstraintTrait for SameTypeConstraint<
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, _attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, RegionId)>,
+        defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -79,7 +80,7 @@ impl<D: PartialEq, A> ConstraintTrait for SameTypeOperandConstraint<D, A> {
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, _attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        _defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, RegionId)>,
+        _defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -130,7 +131,7 @@ macro_rules! constraint_def {
                 attrs: Vec<(String, Self::AttributeT)>,
                 uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                 defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                regions: Vec<(String, irony::RegionId)>,
+                regions: Vec<(String, Vec<irony::RegionId>)>,
             ) -> bool
             where
                 E: irony::Environ<EntityT = EntityT>,
@@ -174,7 +175,7 @@ macro_rules! constraint_struct_impl {
                 attrs: Vec<(String, Self::AttributeT)>,
                 uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                 defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                regions: Vec<(String, irony::RegionId)>,
+                regions: Vec<(String, Vec<irony::RegionId>)>,
             ) -> bool
             where
                 E: irony::Environ<EntityT = EntityT>,

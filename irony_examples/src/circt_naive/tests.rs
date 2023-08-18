@@ -34,7 +34,7 @@ mod basics {
         });
 
         assert_eq!(env.get_entity(module).get_defs(&env), vec![module_def]);
-        assert_eq!(env.get_op(module_def).get_regions(), vec![(format!("{}", "region"), region)]);
+        assert_eq!(env.get_op(module_def).get_regions(), vec![(format!("{}", "region"), vec![region])]);
         assert_eq!(env.get_region(region).get_use(&env), Some(module_def));
 
         println!("{}", env.print_op(module_def));

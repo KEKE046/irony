@@ -32,7 +32,7 @@ pub trait Op: Id + Debug {
     fn get_parent(&self) -> Option<RegionId>;
     fn set_parent(&mut self, parent: Option<RegionId>);
 
-    fn get_regions(&self) -> Vec<(String, RegionId)>;
+    fn get_regions(&self) -> Vec<(String, Vec<RegionId>)>;
 
     fn use_region(&self, region: RegionId) -> bool;
 
@@ -62,8 +62,8 @@ macro_rules! op_def {
                     defs: [$($def:ident),*$(;$($variadic_def:ident),*)?],
                     uses: [$($use:ident),*$(;$($variadic_use:ident),*)?],
                     $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+                    $(regions: [$($region:ident),*$(;$($variadic_region:ident),+)?],)?
                     $(constraints: [$($constraint:expr),*],)?
-                    $(regions: [$($region:ident),*],)?
                     print: ($($print_tt:tt)*)$(,)?
                 }
             ),*
@@ -78,8 +78,8 @@ macro_rules! op_def {
                     defs : [$($def),*$(;$($variadic_def),+)?],
                     uses : [$($use),*$(;$($variadic_use),+)?],
                     $(attrs : [$($attr : $attr_variant($attr_inner_ty)),*],)?
+                    $(regions: [$($region),*$(;$($variadic_region),+)?],)?
                     $(constraints : [$($constraint),*],)?
-                    $(regions: [$($region),*],)?
                     print: ($($print_tt)*)
                 }
             }
@@ -106,8 +106,8 @@ macro_rules! op_def_one {
             defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
             uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
             $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+            $(regions: [$($region:ident),*$(;$($variadic_region:ident),+)?],)?
             $(constraints: [$($constraint:expr),*],)?
-            $(regions: [$($region:ident),*],)?
             print: ($($print_tt:tt)*)$(,)?
         }
     ) => {
@@ -121,7 +121,13 @@ macro_rules! op_def_one {
             $($use:Option<irony::EntityId>,)*
             $($($variadic_use: Vec<irony::EntityId>,)*)?
             $($($attr: Option<$attr_inner_ty>,)*)?
-            $($($region: Option<irony::RegionId>,)*)?
+            $(
+                $($region: Option<irony::RegionId>,)*
+                $(
+                    $($variadic_region: Vec<irony::RegionId>,)*
+                )?
+            )?
+            
             constraints: Vec<$constraint_ty>,
             parent: Option<irony::RegionId>,
             printer: paste!([< $name Printer >]),
@@ -205,14 +211,19 @@ macro_rules! op_def_one {
                 self.parent = parent;
             }
 
-            fn get_regions(&self) -> Vec<(String, irony::RegionId)> {
+            fn get_regions(&self) -> Vec<(String, Vec<irony::RegionId>)> {
                 vec![
-                    $($((format!("{}", stringify!($region)), self.$region.unwrap())),*)?
+                    $(
+                        $((format!("{}", stringify!($region)), vec![self.$region.unwrap()]),)*
+                        $(
+                            $((format!("{}", stringify!($variadic_region)), self.$variadic_region.to_owned()),)*
+                        )?
+                    )?
                 ]
             }
 
             fn use_region(&self, region: irony::RegionId) -> bool{
-                self.get_regions().iter().any(|(_, id)| *id == region)
+                self.get_regions().iter().any(|(_, v)| v.contains(&region))
             }
 
             fn get_op_name(&self) -> String {
@@ -233,6 +244,7 @@ macro_rules! op_def_one {
                 $($($variadic_use: Vec<irony::EntityId>,)*)?
                 $($($attr: Option<$attr_inner_ty>,)*)?
                 $($($region: Option<irony::RegionId>,)*)?
+                $($($($variadic_region: Vec<irony::RegionId>,)*)?)?
             ) -> Self {
 
                 Self {
@@ -244,6 +256,7 @@ macro_rules! op_def_one {
                     $($($variadic_use,)*)?
                     $($($attr,)*)?
                     $($($region,)*)?
+                    $($($($variadic_region,)*)?)?
 
                     constraints: vec![
                         $($($constraint),*)?
@@ -269,7 +282,7 @@ macro_rules! op_def_one {
                     attrs: Vec<(String, Self::AttributeT)>,
                     uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                     defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                    regions: Vec<(String, irony::RegionId)>,
+                    regions: Vec<(String, Vec<irony::RegionId>)>,
                 ) -> String
                 where
                     E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,
@@ -371,11 +384,12 @@ macro_rules! op_enum {
                 }
             }
 
-            fn get_regions(&self) -> Vec<(String, irony::RegionId)> {
+            fn get_regions(&self) -> Vec<(String, Vec<irony::RegionId>)> {
                 match self {
                     $($name::$variant(inner) => inner.get_regions()),*
                 }
             }
+
 
 
             fn use_region(&self, region: irony::RegionId) -> bool{
@@ -420,7 +434,7 @@ macro_rules! op_printer {
                     attrs: Vec<(String, Self::AttributeT)>,
                     uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                     defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                    regions: Vec<(String, irony::RegionId)>,
+                    regions: Vec<(String, Vec<irony::RegionId>)>,
                 ) -> String
                 where
                     E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,
