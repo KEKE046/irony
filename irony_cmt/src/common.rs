@@ -1,3 +1,5 @@
+use std::panic::Location;
+
 use irony::utils;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -327,6 +329,16 @@ impl Into<ArrayAttr> for () {
     fn into(self) -> ArrayAttr { ArrayAttr(Vec::<AttributeEnum>::new()) }
 }
 
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocationAttr(pub Location<'static>);
+
+impl std::fmt::Display for LocationAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 irony::data_type_enum![
     DataTypeEnum = {
         UInt(UIntType),
@@ -342,6 +354,7 @@ irony::attribute_enum! {
     AttributeEnum = {
         ConstantAttr(ConstantAttr),
         BoolAttr(BoolAttr),
+        LocationAttr(LocationAttr),
         IdAttr(IdAttr),
         StringAttr(StringAttr),
         TypeAttr(TypeAttr),

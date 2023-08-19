@@ -13,6 +13,9 @@ pub trait Entity: Id {
     fn get_parent(&self) -> Option<RegionId>;
     fn set_parent(&mut self, parent: Option<RegionId>);
     fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+    fn get_attr(&self, attr_name: &str) -> Option<Self::AttributeT> {
+        crate::utils::extract_vec(&self.get_attrs(), attr_name)
+    }
     fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>);
 
     fn update_attrs<F>(&mut self, name: &str, f: F) -> ()
@@ -187,7 +190,6 @@ macro_rules! entity_def_one {
                 )?
                 attrs
             }
-
             fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
                 $(
                     $(

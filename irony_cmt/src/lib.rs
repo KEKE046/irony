@@ -19,8 +19,8 @@ irony::entity_def! {
     EntityEnum = {
         Invalid: [],
         Todo: [],
-        Wire: [name: StringAttr(StringAttr)],
-        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr)],
+        Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
 
     }
 }

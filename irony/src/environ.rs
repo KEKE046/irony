@@ -77,7 +77,29 @@ pub trait Environ: Sized {
         let uses = op.get_uses();
         let defs = op.get_defs();
         let regions = op.get_regions();
-        printer.print(self, attributes, uses, defs, regions)
+        let mut str = printer.print(self, attributes, uses, defs.to_owned(), regions);
+
+        for (_def_name, defv) in defs.iter() {
+            for def in defv {
+                if let Some(entity_id) = def {
+                    let entity = self.get_entity(*entity_id);
+                    let debug = entity.get_attr("debug");
+                    let location = entity.get_attr("location");
+                    match (debug, location) {
+                        (Some(_), Some(location)) => {
+                            
+                            str = format!("{}\n\t// {}: {}", str, self.print_entity(*entity_id), location);
+                        }, 
+                        _ => {},
+                    }  
+
+                } else {
+
+                }
+            }
+        }
+
+        str
     }
 
     fn print_entity(&self, entity: EntityId) -> String {
