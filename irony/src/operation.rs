@@ -127,7 +127,7 @@ macro_rules! op_def_one {
                     $($variadic_region: Vec<irony::RegionId>,)*
                 )?
             )?
-            
+
             constraints: Vec<$constraint_ty>,
             parent: Option<irony::RegionId>,
             printer: paste!([< $name Printer >]),

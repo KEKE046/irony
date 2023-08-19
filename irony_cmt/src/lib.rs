@@ -54,12 +54,12 @@ irony::op_def! {
                         "priority"
                     };
 
-                    let cases = 
+                    let cases =
                         uses[0].1.iter().zip(regions[1].1.iter()).map(|(cond, body)| {
                             format!("{} : {{\n{}\n}}", env.print_entity(cond.unwrap()), env.print_region(*body))
                         }).collect::<Vec<_>>().join(", \n");
-                    
-                    let default = 
+
+                    let default =
                         format!("default : {{\n{}\n}}", env.print_region(regions[0].1[0]));
 
                     let res_typs = defs[0].1.iter().map(|id| {
@@ -613,16 +613,14 @@ impl CmtEnv {
         let mut this = Self::default();
         this.add_entity(INVALID.into());
         this.add_entity(HOLE.into());
-        
+
         this.begin_region(None);
         this
     }
 }
 
 impl Drop for CmtEnv {
-    fn drop(&mut self) {
-        self.end_region();
-    }
+    fn drop(&mut self) { self.end_region(); }
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ pub trait ConstraintTrait {
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        defs: Vec<(String, Vec<Option<EntityId>>)>, 
+        defs: Vec<(String, Vec<Option<EntityId>>)>,
         regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
@@ -30,7 +30,8 @@ impl<D: PartialEq, A: Clone + PartialEq> ConstraintTrait for SameTypeConstraint<
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, _attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, Vec<RegionId>)>,
+        defs: Vec<(String, Vec<Option<EntityId>>)>,
+        _regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,
@@ -80,7 +81,8 @@ impl<D: PartialEq, A> ConstraintTrait for SameTypeOperandConstraint<D, A> {
     fn verify<'env, E, EntityT: Entity>(
         &self, env: &'env E, _attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        _defs: Vec<(String, Vec<Option<EntityId>>)>, _regions: Vec<(String, Vec<RegionId>)>,
+        _defs: Vec<(String, Vec<Option<EntityId>>)>,
+        _regions: Vec<(String, Vec<RegionId>)>,
     ) -> bool
     where
         E: Environ<EntityT = EntityT>,

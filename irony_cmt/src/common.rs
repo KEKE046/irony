@@ -329,9 +329,12 @@ impl Into<ArrayAttr> for () {
     fn into(self) -> ArrayAttr { ArrayAttr(Vec::<AttributeEnum>::new()) }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocationAttr(pub Location<'static>);
+
+impl From<&Location<'static>> for LocationAttr {
+    fn from(location: &Location<'static>) -> Self { LocationAttr(location.to_owned()) }
+}
 
 impl std::fmt::Display for LocationAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

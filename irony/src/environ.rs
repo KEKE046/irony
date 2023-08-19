@@ -68,7 +68,6 @@ pub trait Environ: Sized {
     }
 
     fn print_op(&self, op: OpId) -> String {
-
         self.verify_op(op);
 
         let op = self.get_op(op);
@@ -87,14 +86,16 @@ pub trait Environ: Sized {
                     let location = entity.get_attr("location");
                     match (debug, location) {
                         (Some(_), Some(location)) => {
-                            
-                            str = format!("{}\n\t// {}: {}", str, self.print_entity(*entity_id), location);
-                        }, 
+                            str = format!(
+                                "{}\n\t// {}: {}",
+                                str,
+                                self.print_entity(*entity_id),
+                                location
+                            );
+                        },
                         _ => {},
-                    }  
-
+                    }
                 } else {
-
                 }
             }
         }
