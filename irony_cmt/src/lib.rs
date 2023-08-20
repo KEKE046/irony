@@ -19,6 +19,7 @@ irony::entity_def! {
     EntityEnum = {
         Invalid: [],
         Todo: [],
+        Event: [name: StringAttr(StringAttr), location: LocationAttr(LocationAttr)],
         Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
 
@@ -29,6 +30,34 @@ irony::op_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
+        
+        // ------ BEGIN: define the operations in `event` dialect -------
+
+        EventDef: {
+            defs: [lhs],
+            uses: [],
+            print: (
+                |env: &E, _, _, def: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(def[0].1[0].unwrap());
+                    format!("{} = event.define", lhs)
+                }
+            )
+        },
+
+        EventEval: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    format!("{} = event.eval {}", lhs, rhs)
+                }
+            )
+        },
+        
+        // ------ BEGIN: define the operations in `event` dialect -------
+
         // ------ BEGIN: define the operations in `temporary` dialect -------
 
         Cases: {
@@ -94,9 +123,13 @@ irony::op_def! {
                         format!("\t{} : {}", env.print_entity(cond.unwrap()), env.print_entity(value.unwrap()))
                     }).collect::<Vec<_>>().join(", \n");
 
-                    let default = env.print_entity(uses[0].1[0].unwrap());
+                   
+                    let default =  if let Some(default) = uses[0].1[0] {
+                        format!("\tdefault : {}\n", env.print_entity(default))
+                    } else  { String::default() } ;
+
                     let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
-                    format!("{} = ILLEGAL.select {} {{\n{}\n\tdefault : {}\n}} : {}", lhs, mode, candidates, default, typ)
+                    format!("{} = ILLEGAL.select {} {{\n{}\n{}}} : {}", lhs, mode, candidates, default, typ)
                 }
             )
         },

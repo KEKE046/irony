@@ -50,6 +50,14 @@ macro_rules! data_type_enum {
                 }
             }
         }
+
+        $(
+            impl From<$variant_ty> for $enum_name {
+                fn from(value: $variant_ty) -> Self {
+                    $enum_name::$variant(value)
+                }
+            }
+        )*
     };
 }
 
