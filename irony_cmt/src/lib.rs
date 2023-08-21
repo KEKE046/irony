@@ -17,9 +17,9 @@ irony::entity_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum]
 
     EntityEnum = {
-        Invalid: [],
-        Todo: [],
+        NONE: [],
         Event: [name: StringAttr(StringAttr), location: LocationAttr(LocationAttr)],
+        EventBlock: [name: StringAttr(StringAttr), location: LocationAttr(LocationAttr)],
         Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
 
@@ -30,7 +30,7 @@ irony::op_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
-        
+
         // ------ BEGIN: define the operations in `event` dialect -------
 
         EventDef: {
@@ -55,7 +55,48 @@ irony::op_def! {
                 }
             )
         },
-        
+
+        EventBlockDef: {
+            defs: [],
+            uses: [event],
+            regions: [body],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _,  regions: Vec<(String, Vec<RegionId>)>| {
+                    let event = env.print_entity(uses[0].1[0].unwrap());
+
+                    let body = env.print_region(regions[0].1[0]);
+
+                    format!("event.block {} {{\n{}\n}}",  event, irony::utils::print::tab(body))
+                }
+            )
+        },
+
+        EventUnion: {
+            defs: [],
+            uses: [father, son],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let father = env.print_entity(uses[0].1[0].unwrap());
+                    let son = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("event.union {} <- {}", father, son)
+                }
+            )
+        },
+
+        EventElseOf: {
+            defs: [],
+            uses: [e, t],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let e = env.print_entity(uses[0].1[0].unwrap());
+                    let t = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("event.else_of {} <- {}", e, t)
+                }
+            )
+        },
+
         // ------ BEGIN: define the operations in `event` dialect -------
 
         // ------ BEGIN: define the operations in `temporary` dialect -------
@@ -123,7 +164,7 @@ irony::op_def! {
                         format!("\t{} : {}", env.print_entity(cond.unwrap()), env.print_entity(value.unwrap()))
                     }).collect::<Vec<_>>().join(", \n");
 
-                   
+
                     let default =  if let Some(default) = uses[0].1[0] {
                         format!("\tdefault : {}\n", env.print_entity(default))
                     } else  { String::default() } ;
@@ -146,6 +187,18 @@ irony::op_def! {
                     let AttributeEnum::CombUnaryPredicate(predicate) = irony::utils::extract_vec(&attrs, "predicate").unwrap() else { panic!("")};
                     let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
                     format!("{} = ILLEGAL.{} {} : {}", def, predicate, uses, typ)
+                }
+            )
+        },
+
+        Invalid: {
+            defs: [lhs],
+            uses: [],
+            print: (
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = ILLEGAL.invalid : {}", lhs, typ)
                 }
             )
         },
@@ -638,14 +691,12 @@ irony::environ_def! {
     struct CmtEnv;
 }
 
-pub(crate) const INVALID: Invalid = Invalid::const_new(None);
-pub(crate) const HOLE: Todo = Todo::const_new(None);
+pub(crate) const NONE: NONE = NONE::const_new(None);
 
 impl CmtEnv {
     pub fn new() -> Self {
         let mut this = Self::default();
-        this.add_entity(INVALID.into());
-        this.add_entity(HOLE.into());
+        this.add_entity(NONE.into());
 
         this.begin_region(None);
         this
