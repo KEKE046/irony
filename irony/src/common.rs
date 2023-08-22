@@ -73,6 +73,7 @@ macro_rules! attribute_enum {
     ) => {
         #[derive(Clone, Debug, PartialEq)]
         pub enum $name {
+            None,
             $($variant($variant_ty)),*
         }
 
@@ -96,6 +97,7 @@ macro_rules! attribute_enum {
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
+                    $name::None => write!(f, "None"),
                     $($name::$variant(x) => write!(f, "{}", x)),*
                 }
             }

@@ -167,7 +167,15 @@ macro_rules! op_def_one {
 
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 vec![
-                    $($((format!("{}", stringify!($attr)), self.$attr.to_owned().unwrap().into())),*)?
+                    $(
+                        $(
+                            if self.$attr.is_some() {
+                                (format!("{}", stringify!($attr)), self.$attr.to_owned().unwrap().into())
+                            } else {
+                                (format!("none"), Self::AttributeT::None)
+                            }
+                        ),*
+                    )?
                 ]
             }
 

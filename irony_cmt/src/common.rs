@@ -231,6 +231,8 @@ impl std::fmt::Display for IdAttr {
     }
 }
 
+pub type UIntAttr = IdAttr;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeAttr(pub DataTypeEnum);
 

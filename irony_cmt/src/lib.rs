@@ -18,8 +18,9 @@ irony::entity_def! {
 
     EntityEnum = {
         NONE: [],
-        Event: [name: StringAttr(StringAttr), location: LocationAttr(LocationAttr)],
-        EventBlock: [name: StringAttr(StringAttr), location: LocationAttr(LocationAttr)],
+        Event: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
 
@@ -40,6 +41,18 @@ irony::op_def! {
                 |env: &E, _, _, def: Vec<(String, Vec<Option<EntityId>>)>, _|  {
                     let lhs = env.print_entity(def[0].1[0].unwrap());
                     format!("{} = event.define", lhs)
+                }
+            )
+        },
+        
+        EventFrom: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    format!("{} = event.from {}", lhs, rhs)
                 }
             )
         },
@@ -66,7 +79,7 @@ irony::op_def! {
 
                     let body = env.print_region(regions[0].1[0]);
 
-                    format!("event.block {} {{\n{}\n}}",  event, irony::utils::print::tab(body))
+                    format!("event.block {} {{\n{}\n}}",  event, body)
                 }
             )
         },
@@ -97,7 +110,170 @@ irony::op_def! {
             )
         },
 
-        // ------ BEGIN: define the operations in `event` dialect -------
+        // ------ END: define the operations in `event` dialect -------
+
+        // ------ BEGIN: define the operations in `sequence` dialect -------
+        SqnFromEvent: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = sequence.from_event {}", lhs, rhs)
+                }
+            )
+        },
+
+        SqnDelay: {
+            defs: [lhs],
+            uses: [rhs],
+            attrs: [lb: IdAttr(IdAttr), ub: IdAttr(IdAttr)],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    let lb = irony::utils::extract_vec(&attrs, "lb").unwrap();
+                    let ub = match irony::utils::extract_vec(&attrs, "ub") {
+                        Some(x) => format!("{}", x),
+                        None => format!(""),
+                    };
+                    format!("{} = sequence.delay {} [{}:{}]", lhs, rhs, lb, ub)
+                }
+            )
+        },
+
+        SqnConcat: {
+            defs: [lhs],
+            uses: [s0, s1],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let s0 = env.print_entity(uses[0].1[0].unwrap());
+                    let s1 = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = sequence.concat {}, {}", lhs, s0, s1)
+                }
+            )
+        },
+
+        // ------ END: define the operations in `sequence` dialect -------
+        
+        // ------ BEGIN: define the operations in `property` dialect -------
+
+        PrptFromSqn: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.from_sequence {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptNexttime: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.nexttime {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptAlways: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.always {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptEventually: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.eventually {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptUntil: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.until {}, {}", lhs, a, b)
+                }
+            )
+        },
+        
+        PrptConjunction: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.and {}, {}", lhs, a, b)
+                }
+            )         
+        },
+        
+        PrptImplica: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.implica {}, {}", lhs, a, b)
+                }
+            )  
+        },
+
+        PrptSynth: {
+            defs: [],
+            uses: [property],
+            attrs: [],
+            print: (
+                |env: &E, _attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let property = env.print_entity(uses[0].1[0].unwrap());
+
+                    let attr = "";
+
+                    format!("property.synthesize {} {}", property, attr)
+                }
+
+            )
+        },
+
+        
+        // ------ END: define the operations in `property` dialect -------
 
         // ------ BEGIN: define the operations in `temporary` dialect -------
 
