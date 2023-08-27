@@ -1,4 +1,5 @@
 mod hw_test {
+    use std::panic::Location;
     use std::vec;
 
     use irony::{Environ, Region};
@@ -8,9 +9,9 @@ mod hw_test {
     pub fn create() -> (CmtEnv, EntityId, OpId) {
         let mut cmt = CmtEnv::default();
 
-        let module_pass =
-            cmt.add_entity(Module::new(None, Some("Pass".into()), None).into());
-        let module_pass_body = cmt.add_region(Region::default());
+        let module_pass = cmt
+            .add_entity(Module::new(None, Some("Pass".into()), None, None, None).into());
+        let module_pass_body = cmt.add_region(Region::new(true));
         let module_pass_def = cmt.add_op(
             HwModule::new(
                 Some(module_pass),
@@ -26,7 +27,13 @@ mod hw_test {
 
         cmt.with_region(Some(module_pass_body), |cmt| {
             let a = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("a".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
             cmt.add_op(HwInput::new(vec![a]).into());
@@ -35,9 +42,10 @@ mod hw_test {
 
         assert!(cmt.verify_op(module_pass_def));
 
-        let module = cmt
-            .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = cmt.add_region(Region::default());
+        let module = cmt.add_entity(
+            Module::new(None, Some("top".into()), Some(true.into()), None, None).into(),
+        );
+        let module_body = cmt.add_region(Region::new(true));
         let module_def = cmt.add_op(
             HwModule::new(
                 Some(module),
@@ -53,32 +61,85 @@ mod hw_test {
 
         cmt.with_region(Some(module_body), |cmt| {
             let clk = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(1.into())), Some("clk".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(1.into())),
+                    Some("clk".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let a = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("a".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let b = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("b".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let c = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("c".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("c".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let d = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("d".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("d".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let e = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("e".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("e".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let cond = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(1.into())), Some("cond".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(1.into())),
+                    Some("cond".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let h = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("h".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("h".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let h_reg = cmt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("h_reg".into()))
-                    .into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("h_reg".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
 
             cmt.add_op(HwInput::new(vec![a, clk]).into());
@@ -159,9 +220,17 @@ mod hw_test {
     #[test]
     pub fn module_constraint_test() {
         let mut circt = CmtEnv::default();
-        let module = circt
-            .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = circt.add_region(Region::default());
+        let module = circt.add_entity(
+            Module::new(
+                None,
+                Some("top".into()),
+                Some(true.into()),
+                Some(true.into()),
+                Some(LocationAttr(Location::caller().to_owned())),
+            )
+            .into(),
+        );
+        let module_body = circt.add_region(Region::new(true));
         let module_def = circt.add_op(
             HwModule::new(
                 Some(module),
@@ -183,10 +252,22 @@ mod hw_test {
 
         circt.with_region(Some(module_body), |circt| {
             let a = circt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("a".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let b = circt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("b".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
             circt.add_op(HwInput::new(vec![a, b]).into());
@@ -200,9 +281,17 @@ mod hw_test {
     pub fn instance_constraint_test() {
         let mut circt = CmtEnv::default();
 
-        let module_pass =
-            circt.add_entity(Module::new(None, Some("Pass".into()), None).into());
-        let module_pass_body = circt.add_region(Region::default());
+        let module_pass = circt.add_entity(
+            Module::new(
+                None,
+                Some("Pass".into()),
+                None,
+                Some(true.into()),
+                Some(LocationAttr(Location::caller().to_owned())),
+            )
+            .into(),
+        );
+        let module_pass_body = circt.add_region(Region::new(true));
         let module_pass_def = circt.add_op(
             HwModule::new(
                 Some(module_pass),
@@ -218,7 +307,13 @@ mod hw_test {
 
         circt.with_region(Some(module_pass_body), |circt| {
             let a = circt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("a".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             // let c = circt.add_entity(Wire::new("c", DataTypeEnum::UInt(8.into())).into());
             circt.add_op(HwInput::new(vec![a]).into());
@@ -227,9 +322,17 @@ mod hw_test {
 
         assert!(circt.verify_op(module_pass_def));
 
-        let module = circt
-            .add_entity(Module::new(None, Some("top".into()), Some(true.into())).into());
-        let module_body = circt.add_region(Region::default());
+        let module = circt.add_entity(
+            Module::new(
+                None,
+                Some("top".into()),
+                Some(true.into()),
+                Some(true.into()),
+                Some(LocationAttr(Location::caller().to_owned())),
+            )
+            .into(),
+        );
+        let module_body = circt.add_region(Region::new(true));
         circt.add_op(
             HwModule::new(
                 Some(module),
@@ -245,10 +348,22 @@ mod hw_test {
 
         circt.with_region(Some(module_body), |circt| {
             let a = circt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("a".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("a".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
             let b = circt.add_entity(
-                Wire::new(Some(DataTypeEnum::UInt(8.into())), Some("b".into())).into(),
+                Wire::new(
+                    Some(DataTypeEnum::UInt(8.into())),
+                    Some("b".into()),
+                    Some(true.into()),
+                    Some(LocationAttr(Location::caller().to_owned())),
+                )
+                .into(),
             );
 
             circt.add_op(HwInput::new(vec![a]).into());

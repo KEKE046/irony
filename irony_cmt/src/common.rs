@@ -1,6 +1,8 @@
+use std::panic::Location;
+
 use irony::utils;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct UIntType(pub usize);
 
 impl std::fmt::Display for UIntType {
@@ -13,7 +15,7 @@ impl Into<UIntType> for usize {
     fn into(self) -> UIntType { UIntType(self) }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct StructType(pub Vec<(String, Box<DataTypeEnum>)>);
 
 // TODO: fix this
@@ -31,7 +33,7 @@ impl std::fmt::Display for StructType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ArrayType(pub Box<DataTypeEnum>, pub usize);
 
 // TODO: fix this
@@ -41,7 +43,7 @@ impl std::fmt::Display for ArrayType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct UArrayType(pub Box<DataTypeEnum>, pub usize);
 
 // TODO: fix this
@@ -49,7 +51,7 @@ impl std::fmt::Display for UArrayType {
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct SeqHlmemType(pub Box<DataTypeEnum>, pub Vec<usize>);
 
 // TODO: fix this
@@ -57,7 +59,7 @@ impl std::fmt::Display for SeqHlmemType {
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub enum CombVariadicPredicate {
     Add,
     Mul,
@@ -84,7 +86,7 @@ impl std::fmt::Display for CombVariadicPredicate {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub enum CombUnaryPredicate {
     Not,
     Neg,
@@ -105,7 +107,7 @@ impl std::fmt::Display for CombUnaryPredicate {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub enum CombBinaryPredicate {
     DivU,
     DivS,
@@ -138,7 +140,7 @@ impl std::fmt::Display for CombBinaryPredicate {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub enum CombICmpPredicate {
     EQ,
     NE,
@@ -183,7 +185,7 @@ impl std::fmt::Display for CombICmpPredicate {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct StringAttr(pub String);
 
 impl Into<StringAttr> for &str {
@@ -200,7 +202,7 @@ impl std::fmt::Display for StringAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct BoolAttr(pub bool);
 
 impl Into<BoolAttr> for bool {
@@ -213,7 +215,7 @@ impl std::fmt::Display for BoolAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct IdAttr(pub usize);
 
 impl Into<IdAttr> for u32 {
@@ -229,7 +231,9 @@ impl std::fmt::Display for IdAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+pub type UIntAttr = IdAttr;
+
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct TypeAttr(pub DataTypeEnum);
 
 impl std::fmt::Display for TypeAttr {
@@ -238,7 +242,7 @@ impl std::fmt::Display for TypeAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ConstantAttr(pub Vec<bool>);
 impl std::fmt::Display for ConstantAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -264,7 +268,7 @@ impl Into<ConstantAttr> for usize {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ArrayAttr(pub Vec<AttributeEnum>);
 impl std::fmt::Display for ArrayAttr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -327,6 +331,19 @@ impl Into<ArrayAttr> for () {
     fn into(self) -> ArrayAttr { ArrayAttr(Vec::<AttributeEnum>::new()) }
 }
 
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct LocationAttr(pub Location<'static>);
+
+impl From<&Location<'static>> for LocationAttr {
+    fn from(location: &Location<'static>) -> Self { LocationAttr(location.to_owned()) }
+}
+
+impl std::fmt::Display for LocationAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 irony::data_type_enum![
     DataTypeEnum = {
         UInt(UIntType),
@@ -342,6 +359,7 @@ irony::attribute_enum! {
     AttributeEnum = {
         ConstantAttr(ConstantAttr),
         BoolAttr(BoolAttr),
+        LocationAttr(LocationAttr),
         IdAttr(IdAttr),
         StringAttr(StringAttr),
         TypeAttr(TypeAttr),

@@ -6,7 +6,8 @@ pub trait OpPrinterTrait {
     fn print<'env, E, EntityT: Entity>(
         &self, env: &'env E, attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
-        defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, RegionId)>,
+        defs: Vec<(String, Vec<Option<EntityId>>)>,
+        regions: Vec<(String, Vec<RegionId>)>,
     ) -> String
     where
         E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,

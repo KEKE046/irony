@@ -1,3 +1,4 @@
+#![feature(macro_metavar_expr)]
 #[allow(unused_variables)]
 pub use irony::{self, preclude::*};
 
@@ -17,10 +18,12 @@ irony::entity_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum]
 
     EntityEnum = {
-        Invalid: [],
-        Todo: [],
-        Wire: [name: StringAttr(StringAttr)],
-        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr)],
+        NONE: [],
+        Event: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
 
     }
 }
@@ -29,13 +32,296 @@ irony::op_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
+
+        // ------ BEGIN: define the operations in `event` dialect -------
+
+        EventDef: {
+            defs: [lhs],
+            uses: [],
+            print: (
+                |env: &E, _, _, def: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(def[0].1[0].unwrap());
+                    format!("{} = event.define", lhs)
+                }
+            )
+        },
+        
+        EventFrom: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    format!("{} = event.from {}", lhs, rhs)
+                }
+            )
+        },
+
+        EventEval: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    format!("{} = event.eval {}", lhs, rhs)
+                }
+            )
+        },
+
+        EventBlockDef: {
+            defs: [],
+            uses: [event],
+            regions: [body],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _,  regions: Vec<(String, Vec<RegionId>)>| {
+                    let event = env.print_entity(uses[0].1[0].unwrap());
+
+                    let body = env.print_region(regions[0].1[0]);
+
+                    format!("event.block {} {{\n{}\n}}",  event, body)
+                }
+            )
+        },
+
+        EventUnion: {
+            defs: [],
+            uses: [father, son],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let father = env.print_entity(uses[0].1[0].unwrap());
+                    let son = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("event.union {} <- {}", father, son)
+                }
+            )
+        },
+
+        EventElseOf: {
+            defs: [],
+            uses: [e, t],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let e = env.print_entity(uses[0].1[0].unwrap());
+                    let t = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("event.else_of {} <- {}", e, t)
+                }
+            )
+        },
+
+        // ------ END: define the operations in `event` dialect -------
+
+        // ------ BEGIN: define the operations in `sequence` dialect -------
+        SqnFromEvent: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = sequence.from_event {}", lhs, rhs)
+                }
+            )
+        },
+
+        SqnDelay: {
+            defs: [lhs],
+            uses: [rhs],
+            attrs: [lb: IdAttr(IdAttr)(*), ub: IdAttr(IdAttr)(*)],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+                    let lb = irony::utils::extract_vec(&attrs, "lb").unwrap();
+                    let ub = match irony::utils::extract_vec(&attrs, "ub") {
+                        Some(x) => format!("{}", x),
+                        None => format!(""),
+                    };
+                    format!("{} = sequence.delay {} [{}:{}]", lhs, rhs, lb, ub)
+                }
+            )
+        },
+
+        SqnConcat: {
+            defs: [lhs],
+            uses: [s0, s1],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let s0 = env.print_entity(uses[0].1[0].unwrap());
+                    let s1 = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = sequence.concat {}, {}", lhs, s0, s1)
+                }
+            )
+        },
+
+        // ------ END: define the operations in `sequence` dialect -------
+        
+        // ------ BEGIN: define the operations in `property` dialect -------
+
+        PrptFromSqn: {
+            defs: [lhs],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.from_sequence {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptNexttime: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.nexttime {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptAlways: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.always {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptEventually: {
+            defs: [rst],
+            uses: [rhs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let rhs = env.print_entity(uses[0].1[0].unwrap());
+
+                    format!("{} = property.eventually {}", lhs, rhs)
+                }
+            )
+        },
+
+        PrptUntil: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.until {}, {}", lhs, a, b)
+                }
+            )
+        },
+        
+        PrptConjunction: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.and {}, {}", lhs, a, b)
+                }
+            )         
+        },
+        
+        PrptImplica: {
+            defs: [rst],
+            uses: [a, b],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let a = env.print_entity(uses[0].1[0].unwrap());
+                    let b = env.print_entity(uses[1].1[0].unwrap());
+
+                    format!("{} = property.implica {}, {}", lhs, a, b)
+                }
+            )  
+        },
+
+        PrptSynth: {
+            defs: [],
+            uses: [property],
+            print: (
+                |env: &E, _attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let property = env.print_entity(uses[0].1[0].unwrap());
+
+                    let attr = "";
+
+                    format!("property.synthesize {} {}", property, attr)
+                }
+
+            )
+        },
+
+        
+        // ------ END: define the operations in `property` dialect -------
+
         // ------ BEGIN: define the operations in `temporary` dialect -------
+
+        Cases: {
+            defs: [; results],
+            uses: [; conds],
+            attrs: [ onehot: BoolAttr(BoolAttr)(*)],
+            regions: [dflt; bodies],
+            constraints: [/* TODO */],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, regions: Vec<(String, Vec<RegionId>)>| {
+
+                    let results = defs[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let mode = if let AttributeEnum::BoolAttr(BoolAttr(x)) = irony::utils::extract_vec(&attrs, "onehot").unwrap() {
+                        if x {
+                            "onehot"
+                        } else {
+                            "priority"
+                        }
+                    } else {
+                        "priority"
+                    };
+
+                    let cases =
+                        uses[0].1.iter().zip(regions[1].1.iter()).map(|(cond, body)| {
+                            format!("{} : {{\n{}\n}}", env.print_entity(cond.unwrap()), env.print_region(*body))
+                        }).collect::<Vec<_>>().join(", \n");
+
+                    let default =
+                        format!("default : {{\n{}\n}}", env.print_region(regions[0].1[0]));
+
+                    let res_typs = defs[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+
+                    format!("{} = cases {} {{\n{}\n{}\n}} : {}", results, mode, irony::utils::print::tab(cases), irony::utils::print::tab(default), res_typs)
+                }
+            )
+        },
 
         Select: {
             defs: [lhs],
             uses: [default; conds, values],
-            attrs: [ onehot: BoolAttr(BoolAttr)],
-            constraints: [],
+            attrs: [ onehot: BoolAttr(BoolAttr)(*)],
+            constraints: [/* TODO */],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
                     let lhs = env.print_entity(defs[0].1[0].unwrap());
@@ -54,9 +340,13 @@ irony::op_def! {
                         format!("\t{} : {}", env.print_entity(cond.unwrap()), env.print_entity(value.unwrap()))
                     }).collect::<Vec<_>>().join(", \n");
 
-                    let default = env.print_entity(uses[0].1[0].unwrap());
+
+                    let default =  if let Some(default) = uses[0].1[0] {
+                        format!("\tdefault : {}\n", env.print_entity(default))
+                    } else  { String::default() } ;
+
                     let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
-                    format!("{} = ILLEGAL.select {} {{\n{}\n\tdefault : {}\n}} : {}", lhs, mode, candidates, default, typ)
+                    format!("{} = ILLEGAL.select {} {{\n{}\n{}}} : {}", lhs, mode, candidates, default, typ)
                 }
             )
         },
@@ -64,7 +354,7 @@ irony::op_def! {
         CombUnary: {
             defs: [lhs],
             uses: [op],
-            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
+            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -77,6 +367,18 @@ irony::op_def! {
             )
         },
 
+        Invalid: {
+            defs: [lhs],
+            uses: [],
+            print: (
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                    format!("{} = ILLEGAL.invalid : {}", lhs, typ)
+                }
+            )
+        },
+
         // ------ END: define the operations in `temporary` dialect -------
 
 
@@ -84,7 +386,6 @@ irony::op_def! {
         Assign: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [invalid: BoolAttr(BoolAttr)],   // TODO: This should be marked at pass manager rather than the operation itself
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs:Vec<(String, Vec<Option<EntityId>>)>, _ | {
@@ -100,11 +401,11 @@ irony::op_def! {
         HwModule: {
             defs: [lhs],
             uses: [],
-            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
-            constraints: [ModuleConstraint::default().into()],
+            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
             regions: [body],
+            constraints: [ModuleConstraint::default().into()],
             print: (
-                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, RegionId)>| {
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, Vec<RegionId>)>| {
                     let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&attrs, "arg_names").unwrap() else { panic!("")};
                     let AttributeEnum::ArrayAttr(arg_types) = irony::utils::extract_vec(&attrs, "arg_types").unwrap() else { panic!("")};
 
@@ -119,7 +420,7 @@ irony::op_def! {
                     let outputs = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
                         format!("{}: {}", name, ty)
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.module @{}({}) -> ({}) {}", name, args, outputs, env.print_region(regions[0].1))
+                    format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1[0]))
                 }
             )
         },
@@ -128,7 +429,7 @@ irony::op_def! {
         HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
-            attrs: [target_id: IdAttr(IdAttr), name: StringAttr(StringAttr)],
+            attrs: [target_id: IdAttr(IdAttr)(*), name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -173,7 +474,6 @@ irony::op_def! {
         HwOutput: {
             defs: [],
             uses: [; outputs],
-            constraints:[],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
                     let outputs = uses[0].1.iter().map(|id| {
@@ -206,7 +506,7 @@ irony::op_def! {
         HwConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [value: ConstantAttr(ConstantAttr)],
+            attrs: [value: ConstantAttr(ConstantAttr)(*)],
             constraints: [SameTypeConstant::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -226,7 +526,7 @@ irony::op_def! {
         HwAggregateConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [attrs: ArrayAttr(ArrayAttr)],
+            attrs: [attrs: ArrayAttr(ArrayAttr)(*)],
             constraints: [SameTypeAggregate::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -325,7 +625,7 @@ irony::op_def! {
         HwStructExtract: {
             defs: [lhs],
             uses: [struct_input],
-            attrs: [field: StringAttr(StringAttr)],
+            attrs: [field: StringAttr(StringAttr)(*)],
             constraints: [StructExtractConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -341,7 +641,7 @@ irony::op_def! {
         HwStructInject: {
             defs: [lhs],
             uses: [struct_input, new_value],
-            attrs: [field: StringAttr(StringAttr)],
+            attrs: [field: StringAttr(StringAttr)(*)],
             constraints: [StructInjectConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -379,7 +679,7 @@ irony::op_def! {
         CombVariadic: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)],
+            attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -396,7 +696,7 @@ irony::op_def! {
         CombBinary: {
             defs: [lhs],
             uses: [op0, op1],
-            attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)],
+            attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -412,7 +712,7 @@ irony::op_def! {
         CombICmp: {
             defs: [lhs],
             uses: [op0, op1],
-            attrs: [predicate: CombICmpPredicate(CombICmpPredicate)],
+            attrs: [predicate: CombICmpPredicate(CombICmpPredicate)(*)],
             constraints: [SameTypeOperands::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String,Vec<Option<EntityId>>)>, _| {
@@ -485,7 +785,6 @@ irony::op_def! {
         SeqCompReg: {
             defs: [output],
             uses: [input, clk,reset,reset_val],
-            attrs: [/*name: StringAttr(StringAttr)*/],
             constraints: [/* TODO: fill this */],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -563,6 +862,89 @@ irony::op_def! {
 irony::environ_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum, pm = PassManager]
     struct CmtEnv;
+}
+
+pub(crate) const NONE: NONE = NONE::const_new(None);
+
+#[derive(Default)]
+pub struct IdReducer {
+    entity_set: FxHashMap<EntityId, usize>,
+    op_set: FxHashMap<OpId, usize>,
+}
+
+impl ReducerTrait for IdReducer {
+    fn reduce_entity(&mut self, id: EntityId) -> usize {
+        let len = self.entity_set.len();
+        match self.entity_set.entry(id) {
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                *entry.get()
+            },
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let new_id = len;
+                entry.insert(new_id);
+                new_id
+            }
+        }
+    }
+
+    fn reduce_op(&mut self, id: OpId) -> usize {
+        let len = self.op_set.len();
+        match self.op_set.entry(id) {
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                *entry.get()
+            },
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let new_id = len;
+                entry.insert(new_id);
+                new_id
+            }
+        }
+    }
+}
+
+impl CmtEnv {
+    pub fn new() -> Self {
+        let mut this = Self::default();
+        this.add_entity(NONE.into());
+
+        this.begin_region(None);
+        this
+    }
+
+    pub fn hash_op(&mut self, op: OpId) -> Option<OpId> {
+        
+            self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
+            let mut id_reducer = IdReducer::default();
+
+            self.get_op(op).hash_with_reducer(self, &mut id_reducer);
+            
+            let hash_value = self.hasher.borrow_mut().finish();
+
+            let parent = self.get_op(op).get_parent();
+
+            // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
+
+            let (deletion, final_op_id) = match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
+                std::collections::hash_map::Entry::Occupied(entry) => {
+                    
+                    (true, Some(OpId::from(*entry.get())))
+                },
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(op);
+                    (false, Some(op))
+                }
+            };
+
+            if deletion {
+                self.delete_op(op);
+            }
+
+            final_op_id
+    }
+}
+
+impl Drop for CmtEnv {
+    fn drop(&mut self) { self.end_region(); }
 }
 
 #[cfg(test)]
