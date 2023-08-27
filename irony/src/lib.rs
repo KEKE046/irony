@@ -1,3 +1,5 @@
+#![feature(macro_metavar_expr)]
+
 mod common;
 mod constraint;
 mod entity;
@@ -19,8 +21,13 @@ pub use operation::*;
 pub use pass::*;
 pub use printer::*;
 
+
 pub mod preclude {
     pub use super::*;
+    pub use std::hash::Hash;
+    pub use std::cell::{RefCell, RefMut};
+    pub use std::rc::Rc;
+    pub use std::ops::DerefMut;
 }
 
 pub use indexmap;

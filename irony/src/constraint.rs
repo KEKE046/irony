@@ -18,7 +18,7 @@ pub trait ConstraintTrait {
         EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Hash)]
 pub struct SameTypeConstraint<D, A> {
     _marker: PhantomData<(D, A)>,
 }
@@ -69,7 +69,7 @@ impl<D, A> SameTypeConstraint<D, A> {
     pub fn new() -> Self { Self { _marker: PhantomData } }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Hash)]
 pub struct SameTypeOperandConstraint<D, A> {
     _marker: PhantomData<(D, A)>,
 }
@@ -119,7 +119,7 @@ macro_rules! constraint_def {
             $(,)?
         }
     ) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Hash)]
         pub enum $name {
             $($variant($variant_ty)),*
         }
@@ -164,7 +164,7 @@ macro_rules! constraint_def {
 #[macro_export]
 macro_rules! constraint_struct_impl {
     ($variant_ty:ident, $dtype:ty, $attr:ty, $($tt:tt)*) => {
-        #[derive(Default, Clone, Debug, PartialEq)]
+        #[derive(Default, Clone, Debug, PartialEq, Hash)]
         pub struct $variant_ty;
         impl irony::ConstraintTrait for $variant_ty {
             type DataTypeT = $dtype;

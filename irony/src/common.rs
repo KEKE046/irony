@@ -1,4 +1,12 @@
-#[derive(Clone, Debug, PartialEq)]
+use crate::{EntityId, OpId};
+
+pub trait ReducerTrait {
+    fn reduce_entity(&mut self, id: EntityId) -> usize;
+    fn reduce_op(&mut self, id: OpId) -> usize;
+}
+
+
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Symbol {
     name: Option<String>,
 }
@@ -18,7 +26,7 @@ impl Id for usize {
     fn set_id(&mut self, _id: usize) { panic!("cannot set id to usize") }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub struct ConstValueU32<D: Clone> {
     pub value: u32,
     pub dtype: D,
@@ -38,7 +46,7 @@ macro_rules! data_type_enum {
             $(,)?
         }
     ) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Hash)]
         pub enum $enum_name {
             $($variant($variant_ty)),*
         }
@@ -71,7 +79,7 @@ macro_rules! attribute_enum {
             $(,)?
         }
     ) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Hash)]
         pub enum $name {
             None,
             $($variant($variant_ty)),*

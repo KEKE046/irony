@@ -1,7 +1,9 @@
+use std::cell::RefMut;
+
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
 use super::operation::{Op, OpId};
-use crate::{Id, OpPrinterTrait, Region, RegionId};
+use crate::{Id, OpPrinterTrait, ReducerTrait, Region, RegionId};
 
 pub trait Environ: Sized {
     type DataTypeT;
@@ -48,6 +50,7 @@ pub trait Environ: Sized {
     fn with_region<F: for<'a> Fn(&mut Self) -> ()>(
         &mut self, parent: Option<RegionId>, f: F,
     );
+
     fn verify_op(&self, op: OpId) -> bool {
         let op = self.get_op(op);
         let constraints = op.get_constraints();
@@ -124,9 +127,33 @@ pub trait Environ: Sized {
         format!("{}", crate::utils::print::tab(ops.join("\n")))
     }
 
+    fn delete_entity(&mut self, entity_id: EntityId);
+    
+    fn delete_op(&mut self, op_id: OpId) -> ();
+
+    fn delete_region(&mut self, region_id: RegionId) -> () {
+        for op in self.get_region(region_id).get_op_children() {
+            self.delete_op(op);
+        }
+        for entity in self.get_region(region_id).get_entity_children() {
+            self.delete_entity(entity);
+        }
+    }
+
     fn dump(&self) -> String;
 
     fn run_passes(&mut self) -> Result<(), ()>; // -> ???
+
+    #[track_caller]
+    fn get_hasher(&self) -> RefMut<crate::FxHasher>;
+
+    fn hash_region(&self, region: RegionId, reducer: &mut impl ReducerTrait) {
+        let region = self.get_region(region);
+
+        for op in region.get_op_children() {
+            self.get_op(op).hash_with_reducer(self, reducer);
+        }
+    }
 }
 
 #[macro_export]
@@ -180,8 +207,13 @@ macro_rules! environ_def {
         FIELDS: $($field_vis:vis $field_name:ident : $field_ty:ty)* ;
     ) => {
 
+        #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+        pub struct OpHashT(Option<RegionId>, u64);
+
+        use std::rc::Rc;
+
         #[StructFields(pub)]
-        #[derive(Default, Debug)]
+        #[derive(Default)]
         pub struct $name {
             op_table: irony::FxMapWithUniqueId<$op_ty>,
             entity_table: irony::FxMapWithUniqueId<$entity_ty>,
@@ -189,8 +221,14 @@ macro_rules! environ_def {
             parent_stack: Vec<Option<irony::RegionId>>,
             pass_manager: $pm_ty,
 
+            hasher: Rc<RefCell<irony::FxHasher>>,
+            op_hash_table: FxHashMap<OpHashT, irony::OpId>,
+
             $($field_vis $field_name: $field_ty,)*
         }
+
+        use std::hash::BuildHasher;
+        use std::hash::Hasher;
 
         impl irony::Environ for $name {
             type DataTypeT = $data_ty;
@@ -249,12 +287,6 @@ macro_rules! environ_def {
             }
 
             fn get_entity_entry(&mut self , entity_id: irony::EntityId) -> indexmap::map::Entry<usize, Self::EntityT> {
-                // match self.entity_table.entry(entity_id) {
-                //     indexmap::map::Entry::Occupied(entry) => entry.into_mut(),
-                //     indexmap::map::Entry::Vacant(entry) =>  {
-                //         panic!("get entity not in the table by id \ntable: {:#?}\nentity-id: {:#?}",self.entity_table.get_map(), entity_id.id())
-                //     }
-                // }
                 self.entity_table.entry(entity_id.id())
             }
 
@@ -359,10 +391,43 @@ macro_rules! environ_def {
                 let pass_manager = self.pass_manager.clone();
                 pass_manager.run_passes(self)?;
                 Ok(())
+            }
 
+            fn get_hasher(&self) -> RefMut<irony::FxHasher> {
+                self.hasher.borrow_mut()
+            }
+
+            fn delete_entity(&mut self, entity_id: EntityId) {
+                // if !self.get_entity(entity_id).get_uses(self).is_empty() {
+                //     panic!("The op to be deleted defines an entity that has been used.\n\t{} has been used by\n\t{}\n", self.print_entity(entity_id), self.get_entity(entity_id).get_uses(self).iter().map(|op| self.print_op(*op)).collect::<Vec<String>>().join("\n\t"));
+                // } else {
+                //     self.entity_table.remove(&entity_id.id());
+                // }
+
+                // TODO: turn the "delete entity being used" panic into some checking
+
+                self.entity_table.remove(&entity_id.id());
+            }
+
+            fn delete_op(&mut self, op_id: OpId) -> () {
+                for (_, def_field) in self.get_op(op_id).get_defs() {
+                    for def in def_field {
+                        if let Some(entity_id) = def {
+                            {
+                                self.delete_entity(entity_id);
+                            }
+                        }
+                    }
+                }
+        
+                for (_, region_field) in self.get_op(op_id).get_regions() {
+                    for region in region_field {
+                        self.delete_region(region);
+                    }
+                }
+        
+                self.op_table.remove(&op_id.id());
             }
         }
-
-
     };
 }

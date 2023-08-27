@@ -35,7 +35,7 @@ pub trait Entity: Id {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Hash, Eq)]
 pub struct EntityId(pub usize);
 
 impl From<usize> for EntityId {
@@ -54,7 +54,7 @@ impl EntityId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Region {
     pub id: usize,
     pub isolated: bool,
@@ -68,7 +68,7 @@ impl Id for Region {
     fn set_id(&mut self, id: usize) { self.id = id }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct RegionId(pub usize);
 impl Id for RegionId {
     fn id(&self) -> usize { self.0 }
@@ -117,6 +117,11 @@ impl Region {
             self.entity_children.push(entity)
         }
     }
+
+    pub fn get_op_children(&self) -> Vec<OpId> { self.op_children.to_owned() }
+    pub fn get_entity_children(&self) -> Vec<EntityId> {
+        self.entity_children.to_owned()
+    }
 }
 
 #[macro_export]
@@ -144,7 +149,7 @@ macro_rules! entity_def_one {
 
 
     ($name:ident : ($(attrs = [$($attr:ident: $attr_variant:ident($attr_inner_ty:ty))*],)? data_type = $data_type:ty, attr = $attr_ty:ty)) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Hash)]
         pub struct $name {
             pub id: usize,
             pub parent: Option<irony::RegionId>,
@@ -236,7 +241,7 @@ macro_rules! entity_def_one {
 #[macro_export]
 macro_rules! entity_enum {
     ([data_type = $dtype:ty, attr = $attr_ty: ty] $name:ident= $($variant:ident),*) => {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Hash)]
         pub enum $name {
             $($variant($variant)),*
         }

@@ -1,19 +1,12 @@
 use std::fmt::Debug;
-use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 
-pub type FxHasher = std::hash::BuildHasherDefault<rustc_hash::FxHasher>;
-pub type FxIndexSet<K> = indexmap::IndexSet<K, FxHasher>;
-pub type FxIndexMap<K, V> = indexmap::IndexMap<K, V, FxHasher>;
-pub type FxDashMap<K, V> = dashmap::DashMap<K, V, FxHasher>;
-pub type FxLinkedHashSet<K> = hashlink::LinkedHashSet<K, FxHasher>;
-pub type FxHashSet<K> = std::collections::HashSet<K, FxHasher>;
+pub type FxHasher = rustc_hash::FxHasher;
+pub type FxHasherBuilder = std::hash::BuildHasherDefault<rustc_hash::FxHasher>;
+pub type FxIndexMap<K, V> = indexmap::IndexMap<K, V, FxHasherBuilder>;
+pub type FxHashSet<K> = std::collections::HashSet<K, FxHasherBuilder>;
+pub type FxHashMap<K, V> = std::collections::HashMap<K, V, FxHasherBuilder>;
 
-pub fn hash<T: Hash>(t: &T) -> u64 {
-    let mut hasher = FxHasher::default().build_hasher();
-    t.hash(&mut hasher);
-    hasher.finish()
-}
 
 #[derive(Debug)]
 pub struct FxMapWithUniqueId<V> {

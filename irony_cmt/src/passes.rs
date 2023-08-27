@@ -1,112 +1,89 @@
-use irony::{Entity, EntityId, Environ, Id, Op, OpId, PassManagerTrait, PassTrait};
+use core::panic;
+use std::collections::HashSet;
 
-use crate::utils::extract_attrs_for_region;
+use irony::{Entity, Environ, Op, OpId, PassManagerTrait, PassTrait};
+
+
 use crate::{AttributeEnum, EntityEnum, OpEnum, StringAttr};
 
-#[derive(Debug, Default, Clone)]
+
+#[derive(Debug, Clone)]
 pub struct RenamePass;
 
 impl PassTrait<(), ()> for RenamePass {
     type EntityT = EntityEnum;
     type OpT = OpEnum;
 
-    fn check_op<E>(&self, env: &E, op_id: irony::OpId) -> bool
+    fn check_op<E>(&self, env: &E, op: OpId) -> bool
     where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-        match env.get_op(op_id) {
+        match env.get_op(op) {
             OpEnum::HwModule(_) => true,
             _ => false,
         }
     }
 
-    fn run_raw<E>(&self, env: &mut E, op_id: irony::OpId) -> Result<(), ()>
+    fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
     where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-        let Some(AttributeEnum::ArrayAttr(arg_names)) = extract_attrs_for_region(
-            env,
-            env.get_op(op_id).get_regions()[0].1[0],
-            "HwInput",
-            |op: &<E as Environ>::OpT| op.get_defs(),
-            |env: &E, x: &EntityId| {
-                let AttributeEnum::StringAttr(name) = irony::utils::extract_vec(&env.get_entity(*x).get_attrs(), "name").unwrap() else {panic!()};
-                let id = env.get_entity(*x).id();
-                AttributeEnum::StringAttr(StringAttr(format!("{}_{}", name, id)))
-            },
-        ) else {panic!()};
-        let Some(AttributeEnum::ArrayAttr(_output_names)) = extract_attrs_for_region(
-            env,
-            env.get_op(op_id).get_regions()[0].1[0],
-            "HwOutput",
-            |op: &<E as Environ>::OpT| op.get_uses(),
-            |env: &E, x: &EntityId| {
-                let AttributeEnum::StringAttr(name) = irony::utils::extract_vec(&env.get_entity(*x).get_attrs(), "name").unwrap() else {panic!()};
-                let id = env.get_entity(*x).id();
-                AttributeEnum::StringAttr(StringAttr(format!("{}_{}", name, id)))
-            },
-        ) else { panic!() };
-        // Change the name of the module by appending it with "_id"
-        env.get_op_entry(op_id).and_modify(|op| {
-            if let OpEnum::HwModule(mod_def) = op {
-                mod_def.name = Some(StringAttr(format!(
-                    "{}_{}",
-                    mod_def.name.as_ref().unwrap(),
-                    mod_def.id
-                )));
-                mod_def.arg_names = Some(arg_names);
-                // mod_def.output_names = Some(output_names);
+        let region = env.get_op(op).get_regions()[0].1[0];
+
+        let mut name_set = HashSet::new();
+
+        let included = env.get_region(region).op_children.to_owned();
+        for op_id in included {
+            match env.get_op(op_id) {
+                OpEnum::HwInput(_) => {},
+                x => {
+                    let defs = x
+                        .get_defs()
+                        .iter()
+                        .flat_map(|(_, v)| {
+                            v.iter().filter_map(|x| x.map(|x| x.to_owned()))
+                        })
+                        .collect::<Vec<_>>();
+                    for def in defs {
+                        let name = env.get_entity(def).get_attr("name").unwrap();
+                        let name = match name {
+                            AttributeEnum::StringAttr(StringAttr(name)) => name,
+                            _ => {
+                                panic!()
+                            },
+                        };
+
+                        let mut splits = name.split('_').collect::<Vec<_>>();
+                        loop {
+                            let last = splits.pop();
+                            match last {
+                                Some(last) => {
+                                    if last.to_string().parse::<usize>().is_ok() {
+                                        let shorter = splits.join("_");
+                                        if name_set.contains(&shorter) {
+                                            splits.push(last);
+                                            break;
+                                        }
+                                    } else {
+                                        splits.push(last);
+                                        break;
+                                    }
+                                }
+                                _ => { break;}
+                            }
+                        }
+                        
+                        let name = splits.join("_");
+                        name_set.insert(name.to_owned());
+
+                        
+                        env.get_entity_entry(def).and_modify(|entity| {
+                            entity.set_attrs(vec![(
+                                "name".to_owned(),
+                                AttributeEnum::StringAttr(StringAttr(name)),
+                            )]);
+                        });
+                    }
+                },
             }
-        });
-
-        let region_id = env.get_op(op_id).get_regions()[0].1.to_owned();
-
-        // Run RenamePass on potential legal ops (with region, currently None)
-        let op_children = env.get_region(region_id[0]).op_children.clone();
-        for op_id in op_children.iter() {
-            self.run_on(env, *op_id)?;
         }
-
-        for op_id in op_children.iter() {
-            env.get_op_entry(*op_id).and_modify(|op| {
-                let attrs = op
-                    .get_attrs()
-                    .iter()
-                    .map(|(name, attr)| {
-                        if name == "name" {
-                            (
-                                name.to_owned(),
-                                AttributeEnum::StringAttr(StringAttr(
-                                    format!("{}_{}", attr, op_id.id()).into(),
-                                )),
-                            )
-                        } else {
-                            (name.to_owned(), attr.to_owned())
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                op.set_attrs(attrs);
-            });
-        }
-
-        let entity_children = env.get_region(region_id[0]).entity_children.clone();
-        for entity_id in entity_children {
-            env.get_entity_entry(entity_id).and_modify(|entity| {
-                let attrs = entity
-                    .get_attrs()
-                    .iter()
-                    .map(|(name, attr)| {
-                        if name == "name" {
-                            (
-                                name.to_owned(),
-                                AttributeEnum::StringAttr(StringAttr(
-                                    format!("{}_{}", attr, entity_id.id()).into(),
-                                )),
-                            )
-                        } else {
-                            (name.to_owned(), attr.to_owned())
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                entity.set_attrs(attrs);
-            });
-        }
+        
         Ok(())
     }
 }

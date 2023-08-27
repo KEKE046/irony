@@ -5,7 +5,7 @@ pub use paste::paste;
 use super::common::Id;
 use super::entity::EntityId;
 use crate::printer::OpPrinterTrait;
-use crate::{ConstraintTrait, RegionId};
+use crate::{ConstraintTrait, RegionId, ReducerTrait, Environ};
 
 pub trait Op: Id + Debug {
     type DataTypeT;
@@ -39,9 +39,11 @@ pub trait Op: Id + Debug {
     fn get_op_name(&self) -> String;
 
     fn get_printer(&self) -> Self::PrinterT;
+
+    fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait); 
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Hash, Eq)]
 pub struct OpId(pub usize);
 impl From<usize> for OpId {
     fn from(value: usize) -> Self { Self(value) }
@@ -53,6 +55,17 @@ impl Id for OpId {
 }
 
 #[macro_export]
+macro_rules! reduce_then_hash {
+    ($reducer:ident, $target:expr, $hasher:expr) => {
+        {
+            let __target = $target;
+            let __reduced = $reducer.reduce_entity(__target);
+            __reduced.hash($hasher);
+            // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
+        }
+    };
+}
+#[macro_export]
 macro_rules! op_def {
     (
         [data_type = $data_ty:ty, attr = $attr_ty:ty, constraint = $constraint_ty:ty]
@@ -61,7 +74,7 @@ macro_rules! op_def {
                 $name:ident : {
                     defs: [$($def:ident),*$(;$($variadic_def:ident),*)?],
                     uses: [$($use:ident),*$(;$($variadic_use:ident),*)?],
-                    $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+                    $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)$(($attr_hash:tt))?),*],)?
                     $(regions: [$($region:ident),*$(;$($variadic_region:ident),+)?],)?
                     $(constraints: [$($constraint:expr),*],)?
                     print: ($($print_tt:tt)*)$(,)?
@@ -77,7 +90,7 @@ macro_rules! op_def {
                 $name: {
                     defs : [$($def),*$(;$($variadic_def),+)?],
                     uses : [$($use),*$(;$($variadic_use),+)?],
-                    $(attrs : [$($attr : $attr_variant($attr_inner_ty)),*],)?
+                    $(attrs : [$($attr : $attr_variant($attr_inner_ty)$(($attr_hash))?),*],)?
                     $(regions: [$($region),*$(;$($variadic_region),+)?],)?
                     $(constraints : [$($constraint),*],)?
                     print: ($($print_tt)*)
@@ -105,7 +118,7 @@ macro_rules! op_def_one {
         $name:ident : {
             defs: [$($def:ident),*$(;$($variadic_def:ident),+)?],
             uses: [$($use:ident),*$(;$($variadic_use:ident),+)?],
-            $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)),*],)?
+            $(attrs: [$($attr:ident:$attr_variant:ident($attr_inner_ty:ty)$(($attr_hash:tt))?),*],)?
             $(regions: [$($region:ident),*$(;$($variadic_region:ident),+)?],)?
             $(constraints: [$($constraint:expr),*],)?
             print: ($($print_tt:tt)*)$(,)?
@@ -142,7 +155,6 @@ macro_rules! op_def_one {
                 self.id = id;
             }
         }
-
 
         impl irony::Op for $name {
             type DataTypeT = $data_ty;
@@ -241,6 +253,69 @@ macro_rules! op_def_one {
             fn get_printer(&self) -> Self::PrinterT {
                 self.printer.clone()
             }
+            
+
+            fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait) {
+
+                // println!("hashing op: {}", self.op_name);
+
+                {
+                   self.op_name.hash(env.get_hasher().deref_mut());
+                //    println!("\thash {}", self.op_name);
+                }
+                $(
+                    if self.$def.is_some() {
+                        reduce_then_hash!(reducer, self.$def.to_owned().unwrap(), env.get_hasher().deref_mut());
+
+                    }
+                )*
+                $(
+                    $(
+                        for def in self.$variadic_def.to_owned() {
+                            reduce_then_hash!(reducer, def, env.get_hasher().deref_mut());
+                        }
+                    )*
+                )?
+
+                $(
+                    if self.$use.is_some() {
+                        reduce_then_hash!(reducer, self.$use.to_owned().unwrap(), env.get_hasher().deref_mut());
+                    }
+                )*
+                $(
+                    $(
+                        for used in self.$variadic_use.to_owned() {
+                            reduce_then_hash!(reducer, used, env.get_hasher().deref_mut());
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        $(
+                            ${ignore(attr_hash)}
+                            self.$attr.hash(env.get_hasher().deref_mut());
+                            // println!("\thash {:?}", self.$attr);
+                        )?
+                    )*
+                )?
+
+                $(
+                    $(
+                        // println!("hash region {:?}", self.$region.unwrap());
+                        env.hash_region(self.$region.unwrap(), reducer);
+                    )*
+                    $(
+                        $(
+                            for region in self.$variadic_region.to_owned() {
+                                // println!("hash region {:?}", region);
+                                env.hash_region(region, reducer);
+                            }
+                        )*
+                    )?
+                )?
+
+            }
         }
 
 
@@ -277,7 +352,7 @@ macro_rules! op_def_one {
         }
 
         paste! {
-            #[derive(Clone, Debug, PartialEq)]
+            #[derive(Clone, Debug, PartialEq, Hash)]
             pub struct [< $name Printer >];
 
             impl OpPrinterTrait for [< $name Printer >] {
@@ -415,6 +490,12 @@ macro_rules! op_enum {
             fn get_printer(&self) -> Self::PrinterT {
                 match self {
                     $($name::$variant(inner) => inner.get_printer().into()),*
+                }
+            }
+
+            fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait) {
+                match self {
+                    $($name::$variant(inner) => inner.hash_with_reducer(env, reducer)),*
                 }
             }
         }

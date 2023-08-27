@@ -1,3 +1,4 @@
+#![feature(macro_metavar_expr)]
 #[allow(unused_variables)]
 pub use irony::{self, preclude::*};
 
@@ -129,7 +130,7 @@ irony::op_def! {
         SqnDelay: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [lb: IdAttr(IdAttr), ub: IdAttr(IdAttr)],
+            attrs: [lb: IdAttr(IdAttr)(*), ub: IdAttr(IdAttr)(*)],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
                     let lhs = env.print_entity(defs[0].1[0].unwrap());
@@ -259,7 +260,6 @@ irony::op_def! {
         PrptSynth: {
             defs: [],
             uses: [property],
-            attrs: [],
             print: (
                 |env: &E, _attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
                     let property = env.print_entity(uses[0].1[0].unwrap());
@@ -280,7 +280,7 @@ irony::op_def! {
         Cases: {
             defs: [; results],
             uses: [; conds],
-            attrs: [ onehot: BoolAttr(BoolAttr)],
+            attrs: [ onehot: BoolAttr(BoolAttr)(*)],
             regions: [dflt; bodies],
             constraints: [/* TODO */],
             print: (
@@ -320,7 +320,7 @@ irony::op_def! {
         Select: {
             defs: [lhs],
             uses: [default; conds, values],
-            attrs: [ onehot: BoolAttr(BoolAttr)],
+            attrs: [ onehot: BoolAttr(BoolAttr)(*)],
             constraints: [/* TODO */],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -354,7 +354,7 @@ irony::op_def! {
         CombUnary: {
             defs: [lhs],
             uses: [op],
-            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)],
+            attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -386,7 +386,6 @@ irony::op_def! {
         Assign: {
             defs: [lhs],
             uses: [rhs],
-            attrs: [invalid: BoolAttr(BoolAttr)],   // TODO: This should be marked at pass manager rather than the operation itself
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs:Vec<(String, Vec<Option<EntityId>>)>, _ | {
@@ -402,7 +401,7 @@ irony::op_def! {
         HwModule: {
             defs: [lhs],
             uses: [],
-            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)],
+            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
             regions: [body],
             constraints: [ModuleConstraint::default().into()],
             print: (
@@ -430,7 +429,7 @@ irony::op_def! {
         HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
-            attrs: [target_id: IdAttr(IdAttr), name: StringAttr(StringAttr)],
+            attrs: [target_id: IdAttr(IdAttr)(*), name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -475,7 +474,6 @@ irony::op_def! {
         HwOutput: {
             defs: [],
             uses: [; outputs],
-            constraints:[],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
                     let outputs = uses[0].1.iter().map(|id| {
@@ -508,7 +506,7 @@ irony::op_def! {
         HwConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [value: ConstantAttr(ConstantAttr)],
+            attrs: [value: ConstantAttr(ConstantAttr)(*)],
             constraints: [SameTypeConstant::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -528,7 +526,7 @@ irony::op_def! {
         HwAggregateConstant: {
             defs: [lhs],
             uses: [],
-            attrs: [attrs: ArrayAttr(ArrayAttr)],
+            attrs: [attrs: ArrayAttr(ArrayAttr)(*)],
             constraints: [SameTypeAggregate::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -627,7 +625,7 @@ irony::op_def! {
         HwStructExtract: {
             defs: [lhs],
             uses: [struct_input],
-            attrs: [field: StringAttr(StringAttr)],
+            attrs: [field: StringAttr(StringAttr)(*)],
             constraints: [StructExtractConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -643,7 +641,7 @@ irony::op_def! {
         HwStructInject: {
             defs: [lhs],
             uses: [struct_input, new_value],
-            attrs: [field: StringAttr(StringAttr)],
+            attrs: [field: StringAttr(StringAttr)(*)],
             constraints: [StructInjectConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -681,7 +679,7 @@ irony::op_def! {
         CombVariadic: {
             defs: [lhs],
             uses: [; operands],
-            attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)],
+            attrs: [predicate: CombVariadicPredicate(CombVariadicPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>,  defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -698,7 +696,7 @@ irony::op_def! {
         CombBinary: {
             defs: [lhs],
             uses: [op0, op1],
-            attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)],
+            attrs: [predicate: CombBinaryPredicate(CombBinaryPredicate)(*)],
             constraints: [SameType::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -714,7 +712,7 @@ irony::op_def! {
         CombICmp: {
             defs: [lhs],
             uses: [op0, op1],
-            attrs: [predicate: CombICmpPredicate(CombICmpPredicate)],
+            attrs: [predicate: CombICmpPredicate(CombICmpPredicate)(*)],
             constraints: [SameTypeOperands::new().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String,Vec<Option<EntityId>>)>, _| {
@@ -787,7 +785,6 @@ irony::op_def! {
         SeqCompReg: {
             defs: [output],
             uses: [input, clk,reset,reset_val],
-            attrs: [/*name: StringAttr(StringAttr)*/],
             constraints: [/* TODO: fill this */],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
@@ -869,6 +866,42 @@ irony::environ_def! {
 
 pub(crate) const NONE: NONE = NONE::const_new(None);
 
+#[derive(Default)]
+pub struct IdReducer {
+    entity_set: FxHashMap<EntityId, usize>,
+    op_set: FxHashMap<OpId, usize>,
+}
+
+impl ReducerTrait for IdReducer {
+    fn reduce_entity(&mut self, id: EntityId) -> usize {
+        let len = self.entity_set.len();
+        match self.entity_set.entry(id) {
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                *entry.get()
+            },
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let new_id = len;
+                entry.insert(new_id);
+                new_id
+            }
+        }
+    }
+
+    fn reduce_op(&mut self, id: OpId) -> usize {
+        let len = self.op_set.len();
+        match self.op_set.entry(id) {
+            std::collections::hash_map::Entry::Occupied(entry) => {
+                *entry.get()
+            },
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let new_id = len;
+                entry.insert(new_id);
+                new_id
+            }
+        }
+    }
+}
+
 impl CmtEnv {
     pub fn new() -> Self {
         let mut this = Self::default();
@@ -876,6 +909,37 @@ impl CmtEnv {
 
         this.begin_region(None);
         this
+    }
+
+    pub fn hash_op(&mut self, op: OpId) -> Option<OpId> {
+        
+            self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
+            let mut id_reducer = IdReducer::default();
+
+            self.get_op(op).hash_with_reducer(self, &mut id_reducer);
+            
+            let hash_value = self.hasher.borrow_mut().finish();
+
+            let parent = self.get_op(op).get_parent();
+
+            // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
+
+            let (deletion, final_op_id) = match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
+                std::collections::hash_map::Entry::Occupied(entry) => {
+                    
+                    (true, Some(OpId::from(*entry.get())))
+                },
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(op);
+                    (false, Some(op))
+                }
+            };
+
+            if deletion {
+                self.delete_op(op);
+            }
+
+            final_op_id
     }
 }
 
