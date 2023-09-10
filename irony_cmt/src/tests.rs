@@ -6,16 +6,14 @@ mod hw_test {
 
     use crate::*;
 
-    pub fn create() -> (CmtEnv, EntityId, OpId) {
+    pub fn create() -> (CmtEnv, OpId) {
         let mut cmt = CmtEnv::default();
 
-        let module_pass = cmt
-            .add_entity(Module::new(None, Some("Pass".into()), None, None, None).into());
         let module_pass_body = cmt.add_region(Region::new(true));
         let module_pass_def = cmt.add_op(
             HwModule::new(
-                Some(module_pass),
                 Some(StringAttr("pass".into())),
+                Some(BoolAttr(false)),
                 Some(vec![StringAttr("a".into())].into()),
                 Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
                 Some(vec![StringAttr("b".into())].into()),
@@ -42,14 +40,11 @@ mod hw_test {
 
         assert!(cmt.verify_op(module_pass_def));
 
-        let module = cmt.add_entity(
-            Module::new(None, Some("top".into()), Some(true.into()), None, None).into(),
-        );
         let module_body = cmt.add_region(Region::new(true));
         let module_def = cmt.add_op(
             HwModule::new(
-                Some(module),
                 Some(StringAttr("top".into())),
+                Some(true.into()),
                 Some(vec![StringAttr("a".into())].into()),
                 Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
                 Some(vec![StringAttr("b".into())].into()),
@@ -148,7 +143,7 @@ mod hw_test {
                 HwInstance::new(
                     vec![b],
                     vec![a],
-                    Some(IdAttr(module_pass.id() as usize)),
+                    Some(module_pass_def.into()),
                     Some(StringAttr("pass_inst".into())),
                 )
                 .into(),
@@ -182,7 +177,7 @@ mod hw_test {
 
             cmt.add_op(HwOutput::new(vec![h_reg]).into());
         });
-        (cmt, module, module_def)
+        (cmt, module_def)
     }
 
     #[test]
@@ -220,21 +215,12 @@ mod hw_test {
     #[test]
     pub fn module_constraint_test() {
         let mut circt = CmtEnv::default();
-        let module = circt.add_entity(
-            Module::new(
-                None,
-                Some("top".into()),
-                Some(true.into()),
-                Some(true.into()),
-                Some(LocationAttr(Location::caller().to_owned())),
-            )
-            .into(),
-        );
+
         let module_body = circt.add_region(Region::new(true));
         let module_def = circt.add_op(
             HwModule::new(
-                Some(module),
                 Some(StringAttr("top".into())),
+                Some(true.into()),
                 Some(vec![StringAttr("a".into()), StringAttr("b".into())].into()),
                 Some(
                     vec![
@@ -281,21 +267,11 @@ mod hw_test {
     pub fn instance_constraint_test() {
         let mut circt = CmtEnv::default();
 
-        let module_pass = circt.add_entity(
-            Module::new(
-                None,
-                Some("Pass".into()),
-                None,
-                Some(true.into()),
-                Some(LocationAttr(Location::caller().to_owned())),
-            )
-            .into(),
-        );
         let module_pass_body = circt.add_region(Region::new(true));
         let module_pass_def = circt.add_op(
             HwModule::new(
-                Some(module_pass),
                 Some(StringAttr("pass".into())),
+                Some(false.into()),
                 Some(vec![StringAttr("a".into())].into()),
                 Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
                 Some(vec![StringAttr("b".into())].into()),
@@ -322,21 +298,11 @@ mod hw_test {
 
         assert!(circt.verify_op(module_pass_def));
 
-        let module = circt.add_entity(
-            Module::new(
-                None,
-                Some("top".into()),
-                Some(true.into()),
-                Some(true.into()),
-                Some(LocationAttr(Location::caller().to_owned())),
-            )
-            .into(),
-        );
         let module_body = circt.add_region(Region::new(true));
         circt.add_op(
             HwModule::new(
-                Some(module),
                 Some(StringAttr("top".into())),
+                Some(true.into()),
                 Some(vec![StringAttr("a".into())].into()),
                 Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
                 Some(vec![StringAttr("b".into())].into()),
@@ -373,7 +339,7 @@ mod hw_test {
                 HwInstance::new(
                     vec![b],
                     vec![a],
-                    Some(IdAttr(module_pass.id() as usize)),
+                    Some(OpIdAttr(module_pass_def)),
                     Some(StringAttr("pass_inst".into())),
                 )
                 .into(),

@@ -5,7 +5,7 @@ pub use paste::paste;
 use super::common::Id;
 use super::entity::EntityId;
 use crate::printer::OpPrinterTrait;
-use crate::{ConstraintTrait, RegionId, ReducerTrait, Environ};
+use crate::{ConstraintTrait, Environ, ReducerTrait, RegionId};
 
 pub trait Op: Id + Debug {
     type DataTypeT;
@@ -40,10 +40,12 @@ pub trait Op: Id + Debug {
 
     fn get_printer(&self) -> Self::PrinterT;
 
-    fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait); 
+    fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait);
+
+    fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self;
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Debug, Hash, Eq, Default)]
 pub struct OpId(pub usize);
 impl From<usize> for OpId {
     fn from(value: usize) -> Self { Self(value) }
@@ -56,14 +58,12 @@ impl Id for OpId {
 
 #[macro_export]
 macro_rules! reduce_then_hash {
-    ($reducer:ident, $target:expr, $hasher:expr) => {
-        {
-            let __target = $target;
-            let __reduced = $reducer.reduce_entity(__target);
-            __reduced.hash($hasher);
-            // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
-        }
-    };
+    ($reducer:ident, $target:expr, $hasher:expr) => {{
+        let __target = $target;
+        let __reduced = $reducer.reduce_entity(__target);
+        __reduced.hash($hasher);
+        // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
+    }};
 }
 #[macro_export]
 macro_rules! op_def {
@@ -125,7 +125,7 @@ macro_rules! op_def_one {
         }
     ) => {
         #[StructFields(pub)]
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone)]
         pub struct $name  {
             id: usize,
             op_name: String,
@@ -253,7 +253,7 @@ macro_rules! op_def_one {
             fn get_printer(&self) -> Self::PrinterT {
                 self.printer.clone()
             }
-            
+
 
             fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait) {
 
@@ -315,6 +315,29 @@ macro_rules! op_def_one {
                     )?
                 )?
 
+            }
+
+            fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self {
+                let backup = self.to_owned();
+                Self {
+                    $(
+                        $def: reducer.reduce_option_entity(self.$def),
+                    )*
+                    $(
+                        $(
+                            $variadic_def: self.$variadic_def.into_iter().map(|x| EntityId(reducer.reduce_entity(x))).collect(),
+                        )*
+                    )?
+                    $(
+                        $use: reducer.reduce_option_entity(self.$use),
+                    )*
+                    $(
+                        $(
+                            $variadic_use: self.$variadic_use.into_iter().map(|x| EntityId(reducer.reduce_entity(x))).collect(),
+                        )*
+                    )?
+                    .. backup
+                }
             }
         }
 
@@ -383,8 +406,10 @@ macro_rules! op_def_one {
 #[macro_export]
 macro_rules! op_enum {
     ([data_type = $data_ty:ty, attr = $attr:ty, constraint = $constraint:ty] $name:ident = $($variant:ident),*) => {
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone, Default)]
         pub enum $name {
+            #[default]
+            None,
             $($variant($variant)),*
         }
 
@@ -399,11 +424,13 @@ macro_rules! op_enum {
         impl irony::Id for $name {
             fn id(&self) -> usize {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.id(),)*
                 }
             }
             fn set_id(&mut self, id: usize) {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.set_id(id),)*
                 }
             }
@@ -417,29 +444,35 @@ macro_rules! op_enum {
 
             fn get_defs(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_defs()),*
                 }
             }
             fn get_uses(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 match self {
+                    $name::None => panic!(),
+
                     $($name::$variant(inner) => inner.get_uses()),*
                 }
             }
 
             fn get_attrs(&self) -> Vec<(String, Self::AttributeT)> {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_attrs()),*
                 }
             }
 
             fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> () {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.set_attrs(attrs)),*
                 }
             }
 
             fn get_constraints(&self) -> Vec<Self::ConstraintT> {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_constraints()),*
                 }
 
@@ -447,28 +480,33 @@ macro_rules! op_enum {
 
             fn uses(&self, entity: irony::EntityId) -> bool {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.uses(entity)),*
                 }
             }
             fn defs(&self, entity: irony::EntityId) -> bool{
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.defs(entity)),*
                 }
             }
 
             fn get_parent(&self) -> Option<irony::RegionId>{
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_parent()),*
                 }
             }
             fn set_parent(&mut self, parent: Option<irony::RegionId>) {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.set_parent(parent)),*
                 }
             }
 
             fn get_regions(&self) -> Vec<(String, Vec<irony::RegionId>)> {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_regions()),*
                 }
             }
@@ -477,25 +515,36 @@ macro_rules! op_enum {
 
             fn use_region(&self, region: irony::RegionId) -> bool{
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.use_region(region)),*
                 }
             }
 
             fn get_op_name(&self) -> String {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_op_name()),*
                 }
             }
 
             fn get_printer(&self) -> Self::PrinterT {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_printer().into()),*
                 }
             }
 
             fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait) {
                 match self {
+                    $name::None => panic!(),
                     $($name::$variant(inner) => inner.hash_with_reducer(env, reducer)),*
+                }
+            }
+            
+            fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self {
+                match self {
+                    $name::None => panic!(),
+                    $($name::$variant(inner) => $name::$variant(inner.reduce_def_use(reducer))),*
                 }
             }
         }

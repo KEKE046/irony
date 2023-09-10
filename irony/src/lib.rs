@@ -2,6 +2,7 @@
 
 mod common;
 mod constraint;
+mod region;
 mod entity;
 mod environ;
 mod operation;
@@ -14,6 +15,7 @@ pub mod utils;
 
 pub use common::*;
 pub use constraint::*;
+pub use region::*;
 pub use entity::*;
 pub use environ::*;
 pub use hash::*;

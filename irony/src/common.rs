@@ -3,6 +3,9 @@ use crate::{EntityId, OpId};
 pub trait ReducerTrait {
     fn reduce_entity(&mut self, id: EntityId) -> usize;
     fn reduce_op(&mut self, id: OpId) -> usize;
+    fn reduce_option_entity(&mut self, id: Option<EntityId>) -> Option<EntityId> {
+        id.map(|x| EntityId(self.reduce_entity(x)))
+    }
 }
 
 
@@ -46,14 +49,17 @@ macro_rules! data_type_enum {
             $(,)?
         }
     ) => {
-        #[derive(Clone, Debug, PartialEq, Hash)]
+        #[derive(Clone, Debug, PartialEq, Hash, Default)]
         pub enum $enum_name {
+            #[default]
+            Void,
             $($variant($variant_ty)),*
         }
 
         impl std::fmt::Display for $enum_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
+                    $enum_name::Void => write!(f, "void"),
                     $($enum_name::$variant(inner) => write!(f, "{}", inner)),*
                 }
             }

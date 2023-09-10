@@ -1,6 +1,16 @@
 use std::panic::Location;
 
-use irony::utils;
+use irony::{utils, OpId};
+
+
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct ClkType;
+
+impl std::fmt::Display for ClkType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "i1")
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct UIntType(pub usize);
@@ -230,6 +240,26 @@ impl std::fmt::Display for IdAttr {
         write!(f, "{}", self.0)
     }
 }
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct OpIdAttr(pub OpId);
+
+impl Into<OpIdAttr> for OpId {
+    fn into(self) -> OpIdAttr { OpIdAttr(self) }
+}
+impl Into<OpIdAttr> for usize {
+    fn into(self) -> OpIdAttr { OpId(self).into() }
+}
+
+impl Into<OpId> for OpIdAttr {
+    fn into(self) -> OpId { self.0 }
+}
+
+impl std::fmt::Display for OpIdAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self.0)
+    }
+}
+
 
 pub type UIntAttr = IdAttr;
 
@@ -346,6 +376,7 @@ impl std::fmt::Display for LocationAttr {
 
 irony::data_type_enum![
     DataTypeEnum = {
+        Clk(ClkType),
         UInt(UIntType),
         Struct(StructType),
         Array(ArrayType),
@@ -361,6 +392,7 @@ irony::attribute_enum! {
         BoolAttr(BoolAttr),
         LocationAttr(LocationAttr),
         IdAttr(IdAttr),
+        OpIdAttr(OpIdAttr),
         StringAttr(StringAttr),
         TypeAttr(TypeAttr),
         ArrayAttr(ArrayAttr),

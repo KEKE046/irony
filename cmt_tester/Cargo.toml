@@ -1,5 +1,5 @@
 [package]
-name = "irony"
+name = "cmt_tester"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 
-rustc-hash = "1.1.0"
-indexmap = "2.0.0"
-
-paste = "1.0.14"
-visible = "0.0.1"
+irony_cmt = {path = "../irony_cmt"}
+cement = {path = "../../cement"}
+num-bigint = "0.4.4"

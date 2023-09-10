@@ -14,6 +14,9 @@ pub use passes::*;
 
 mod utils;
 
+// pub use interpret::*;
+
+
 irony::entity_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum]
 
@@ -23,8 +26,6 @@ irony::entity_def! {
         Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
-        Module: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
-
     }
 }
 
@@ -277,6 +278,22 @@ irony::op_def! {
 
         // ------ BEGIN: define the operations in `temporary` dialect -------
 
+        CasesOutput: {
+            defs: [],
+            uses: [; outputs],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let outputs = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let output_types = uses[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("cases.output {}: {}", outputs, output_types)
+                }
+            )
+        },
+
         Cases: {
             defs: [; results],
             uses: [; conds],
@@ -399,9 +416,9 @@ irony::op_def! {
         },
 
         HwModule: {
-            defs: [lhs],
+            defs: [],
             uses: [],
-            attrs: [name: StringAttr(StringAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
+            attrs: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
             regions: [body],
             constraints: [ModuleConstraint::default().into()],
             print: (
@@ -429,12 +446,12 @@ irony::op_def! {
         HwInstance: {
             defs: [; outputs],
             uses: [; inputs],
-            attrs: [target_id: IdAttr(IdAttr)(*), name: StringAttr(StringAttr)],
+            attrs: [target_op_id: OpIdAttr(OpIdAttr)(*), name: StringAttr(StringAttr)],
             constraints: [InstanceConstraint::default().into()],
             print: (
                 |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let AttributeEnum::IdAttr(target_id) = irony::utils::extract_vec(&attrs, "target_id").unwrap() else { panic!("")};
-                    let module_attrs = env.get_op(env.get_entity(EntityId(target_id.0 as usize)).get_defs(env)[0]).get_attrs();
+                    let AttributeEnum::OpIdAttr(target_op_id) = irony::utils::extract_vec(&attrs, "target_op_id").unwrap() else { panic!("")};
+                    let module_attrs = env.get_op(target_op_id.into()).get_attrs();
                     let AttributeEnum::StringAttr(instance_name) = irony::utils::extract_vec(&attrs, "name").unwrap() else { panic!("")};
 
                     let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&module_attrs, "arg_names").unwrap() else { panic!("")};
@@ -724,46 +741,46 @@ irony::op_def! {
                 }
             )
         },
-        CombParity: {
-            defs: [lhs],
-            uses: [rhs],
-            constraints: [/* TODO: fill this */],
-            print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
-                }
-            )
-        },
-        CombExtract: {
-            defs: [lhs],
-            uses: [input, low],
-            constraints: [/* TODO: fill this */],
-            print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
-                }
-            )
-        },
-        CombConcat: {
-            defs: [lhs],
-            uses: [; operands],
-            constraints: [/* TODO: fill this */],
-            print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
-                }
-            )
-        },
-        CombReplicate: {
-            defs: [lhs],
-            uses: [rhs],
-            constraints: [/* TODO: fill this */],
-            print: (
-                |_, _, _, _, _| {
-                    unimplemented!()
-                }
-            )
-        },
+        // CombParity: {
+        //     defs: [lhs],
+        //     uses: [rhs],
+        //     constraints: [/* TODO: fill this */],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             unimplemented!()
+        //         }
+        //     )
+        // },
+        // CombExtract: {
+        //     defs: [lhs],
+        //     uses: [input, low],
+        //     constraints: [/* TODO: fill this */],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             unimplemented!()
+        //         }
+        //     )
+        // },
+        // CombConcat: {
+        //     defs: [lhs],
+        //     uses: [; operands],
+        //     constraints: [/* TODO: fill this */],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             unimplemented!()
+        //         }
+        //     )
+        // },
+        // CombReplicate: {
+        //     defs: [lhs],
+        //     uses: [rhs],
+        //     constraints: [/* TODO: fill this */],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             unimplemented!()
+        //         }
+        //     )
+        // },
         CombMux2: {
             defs: [lhs],
             uses: [cond, op0, op1],
@@ -823,39 +840,65 @@ irony::op_def! {
             )
         },
 
-        SeqHlmem: {
-            defs: [handle],
-            uses: [clk, reset],
-            constraints: [/* TODO: fill this */],
-            print: (
-                |_, _, _, _, _| {
-                    format!("")
-                }
-            )
-        },
+        // SeqHlmem: {
+        //     defs: [handle],
+        //     uses: [clk, reset],
+        //     constraints: [/* TODO: fill this */],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             format!("")
+        //         }
+        //     )
+        // },
 
-        SeqRead: {
-            defs: [rdata],
-            uses: [mem, renable; address],
-            attrs: [latency: IdAttr(IdAttr)],
-            print: (
-                |_, _, _, _, _| {
-                    format!("")
-                }
-            )
-        },
+        // SeqRead: {
+        //     defs: [rdata],
+        //     uses: [mem, renable; address],
+        //     attrs: [latency: IdAttr(IdAttr)],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             format!("")
+        //         }
+        //     )
+        // },
 
-        SeqWrite: {
+        // SeqWrite: {
+        //     defs: [],
+        //     uses: [mem, wenable, wdata; address],
+        //     attrs: [latency: IdAttr(IdAttr)],
+        //     print: (
+        //         |_, _, _, _, _| {
+        //             format!("")
+        //         }
+        //     )
+        // },
+        
+        // ------ END: define the operations in `seq` dialect -------
+
+        
+        // ------ BEGIN: define the operations in `interpret` dialect -------
+        ItprtCondCheck: {
             defs: [],
-            uses: [mem, wenable, wdata; address],
-            attrs: [latency: IdAttr(IdAttr)],
+            uses: [; conds],
+            attrs: [has_default: BoolAttr(BoolAttr)(*), onehot: BoolAttr(BoolAttr)(*)],
             print: (
-                |_, _, _, _, _| {
-                    format!("")
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+
+                    let conds = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let has_default = irony::utils::extract_vec(&attrs, "has_default").unwrap();
+
+                    let onehot = irony::utils::extract_vec(&attrs, "onehot").unwrap();
+                    format!("itprt.cond_check {} {{has_default = {}, onehot = {}}}", conds, has_default, onehot)
                 }
             )
         },
 
+        // ------ END: define the operations in `interpret` dialect -------
+
+        
     }
 }
 
@@ -866,13 +909,14 @@ irony::environ_def! {
 
 pub(crate) const NONE: NONE = NONE::const_new(None);
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct IdReducer {
     entity_set: FxHashMap<EntityId, usize>,
     op_set: FxHashMap<OpId, usize>,
 }
 
 impl ReducerTrait for IdReducer {
+
     fn reduce_entity(&mut self, id: EntityId) -> usize {
         let len = self.entity_set.len();
         match self.entity_set.entry(id) {
@@ -901,6 +945,7 @@ impl ReducerTrait for IdReducer {
         }
     }
 }
+
 
 impl CmtEnv {
     pub fn new() -> Self {

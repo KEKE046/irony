@@ -25,15 +25,12 @@ irony::constraint_def! {
         }),
         InstanceConstraint(InstanceConstraint ,
             |env: &E, attrs, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-            let target_id = irony::utils::extract_vec(&attrs, "target_id");
-            let Some(AttributeEnum::IdAttr(target_id)) = target_id else {
-                panic!("target_id must be a IdAttr")
+            let target_op_id = irony::utils::extract_vec(&attrs, "target_op_id");
+            let Some(AttributeEnum::OpIdAttr(target_op_id)) = target_op_id else {
+                panic!("target_id must be a OpIdAttr")
             };
 
-            let target = env.get_entity(EntityId(target_id.0 as usize));
-            assert!(target.get_defs(env).len() == 1);
-            let target_def = target.get_defs(env)[0];
-            let target_region= env.get_op(target_def).get_regions()[0].1[0];
+            let target_region= env.get_op(target_op_id.into()).get_regions()[0].1[0];
 
             super::utils::extract_input_types(env, target_region) == super::utils::extract_types(env, uses[0].1.to_owned())
             &&

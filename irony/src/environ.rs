@@ -37,6 +37,7 @@ pub trait Environ: Sized {
     fn get_op_entry(&mut self, op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
 
     fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
+    fn get_ops_with_parent(&self, id: Option<RegionId>) -> Vec<OpId>;
     fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
     fn get_region(&self, id: RegionId) -> &Region;
     fn add_region(&mut self, region: Region) -> RegionId;
@@ -70,15 +71,17 @@ pub trait Environ: Sized {
         all_true
     }
 
-    fn print_op(&self, op: OpId) -> String {
-        self.verify_op(op);
+    fn print_op(&self, op_id: OpId) -> String {
+        self.verify_op(op_id);
 
-        let op = self.get_op(op);
+        let op = self.get_op(op_id);
         let printer = op.get_printer();
         let attributes = op.get_attrs();
         let uses = op.get_uses();
         let defs = op.get_defs();
         let regions = op.get_regions();
+
+        // println!("op: {:?}", op_id);
         let mut str = printer.print(self, attributes, uses, defs.to_owned(), regions);
 
         for (_def_name, defv) in defs.iter() {
@@ -300,6 +303,16 @@ macro_rules! environ_def {
                     ),
                 }
             }
+            fn get_ops_with_parent(&self, parent: Option<RegionId>) -> Vec<OpId> {
+                self.op_table.iter().filter_map(|(id, op)| {
+                    if op.get_parent() == parent {
+                        Some(OpId(*id))
+                    } else {
+                        None
+                    }
+                }).collect()
+            }
+
 
             fn get_op_entry(&mut self, op_id: irony::OpId) -> indexmap::map::Entry<usize, Self::OpT> {
                 self.op_table.entry(op_id.id())
