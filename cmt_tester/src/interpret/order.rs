@@ -416,7 +416,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn from_hw_module(cmt: &CmtEnv, op_id: OpId) -> Self {
+    pub fn from_hw_module(cmt: &CmtIR, op_id: OpId) -> Self {
         let mut this = Self::default();
         match cmt.get_op(op_id) {
             OpEnum::HwModule(HwModule { top, .. }) => {
@@ -434,7 +434,7 @@ impl Interpreter {
     }
 
     pub fn extend_with_hw_module(
-        &mut self, cmt: &CmtEnv, op_id: OpId, itfc: Setting,
+        &mut self, cmt: &CmtIR, op_id: OpId, itfc: Setting,
     ) -> () {
         match cmt.get_op(op_id) {
             OpEnum::HwModule(HwModule { body, .. }) => {
@@ -447,14 +447,14 @@ impl Interpreter {
     }
 
     pub fn extend_with_region(
-        &mut self, cmt: &CmtEnv, region_id: RegionId, itfc: Setting,
+        &mut self, cmt: &CmtIR, region_id: RegionId, itfc: Setting,
     ) -> () {
         for op_id in cmt.get_region(region_id).op_children.to_owned() {
             cmt.get_op(op_id).to_interpret(self, cmt, &itfc, op_id);
         }
     }
 
-    fn add_entity(&mut self, cmt: &CmtEnv, entity: EntityId, condition: Condition) -> usize {
+    fn add_entity(&mut self, cmt: &CmtIR, entity: EntityId, condition: Condition) -> usize {
         let reduced = self.reducer.reduce(entity.to_owned());
         match reduced {
             Reduced::New(idx) => {
@@ -472,7 +472,7 @@ impl Interpreter {
     }
 
     fn add_entities(
-        &mut self, cmt: &CmtEnv, entities: Vec<EntityId>, condition: Condition,
+        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, condition: Condition,
     ) -> Vec<usize> {
         let reduced = entities
             .iter()
@@ -484,7 +484,7 @@ impl Interpreter {
     }
 
     fn add_entities_with_target(
-        &mut self, cmt: &CmtEnv, entities: Vec<EntityId>, targets: Vec<usize>,
+        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, targets: Vec<usize>,
     ) -> () {
         assert!(entities.len() == targets.len());
         for (entity, target) in entities.iter().zip(targets) {
@@ -531,7 +531,7 @@ impl Interpreter {
         Comb::new(uses, defs, op)
     }
 
-    fn add_comb_from_op(&mut self, cmt: &CmtEnv, op: OpEnum, condition: Condition) -> () {
+    fn add_comb_from_op(&mut self, cmt: &CmtIR, op: OpEnum, condition: Condition) -> () {
         let mut uses = Vec::new();
         let mut defs = Vec::new();
 
@@ -589,13 +589,13 @@ impl Interpreter {
 
 trait ToInterpret {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, op_id: OpId,
     ) -> ();
 }
 
 impl ToInterpret for OpEnum {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, op_id: OpId,
     ) -> () {
         match self {
             OpEnum::HwInput(hw_input) => {
@@ -643,7 +643,7 @@ impl ToInterpret for OpEnum {
 
 impl ToInterpret for HwInput {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, _op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, _op_id: OpId,
     ) -> () {
         let inputs = self.inputs.to_owned();
 
@@ -663,7 +663,7 @@ impl ToInterpret for HwInput {
 
 impl ToInterpret for HwOutput {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, _op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, _op_id: OpId,
     ) -> () {
         let outputs = self.outputs.to_owned();
 
@@ -683,7 +683,7 @@ impl ToInterpret for HwOutput {
 
 impl ToInterpret for HwInstance {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, _op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, _op_id: OpId,
     ) -> () {
         let target_op_id = self.target_op_id.to_owned().unwrap();
         let (inputs, outputs) = match itfc {
@@ -710,7 +710,7 @@ impl ToInterpret for HwInstance {
 
 impl ToInterpret for SeqCompReg {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, _op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, _op_id: OpId,
     ) -> () {
         let SeqCompReg { input, output, reset, reset_val, .. } = self;
         assert!(matches!(reset.as_ref(), None), "don't support reset yet");
@@ -735,7 +735,7 @@ impl ToInterpret for SeqCompReg {
 
 impl ToInterpret for Select {
     fn to_interpret(
-        &self, itprt: &mut Interpreter, cmt: &CmtEnv, itfc: &Setting, op_id: OpId,
+        &self, itprt: &mut Interpreter, cmt: &CmtIR, itfc: &Setting, op_id: OpId,
     ) -> () {
         let Select { lhs, conds, values, onehot, default, .. } = self;
 

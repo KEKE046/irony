@@ -55,7 +55,6 @@ impl EntityId {
     }
 }
 
-
 #[macro_export]
 macro_rules! entity_def {
     (

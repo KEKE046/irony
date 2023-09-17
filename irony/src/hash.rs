@@ -7,7 +7,6 @@ pub type FxIndexMap<K, V> = indexmap::IndexMap<K, V, FxHasherBuilder>;
 pub type FxHashSet<K> = std::collections::HashSet<K, FxHasherBuilder>;
 pub type FxHashMap<K, V> = std::collections::HashMap<K, V, FxHasherBuilder>;
 
-
 #[derive(Debug)]
 pub struct FxMapWithUniqueId<V> {
     indexmap: FxIndexMap<usize, V>,

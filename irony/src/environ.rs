@@ -131,7 +131,7 @@ pub trait Environ: Sized {
     }
 
     fn delete_entity(&mut self, entity_id: EntityId);
-    
+
     fn delete_op(&mut self, op_id: OpId) -> ();
 
     fn delete_region(&mut self, region_id: RegionId) -> () {
@@ -432,13 +432,13 @@ macro_rules! environ_def {
                         }
                     }
                 }
-        
+
                 for (_, region_field) in self.get_op(op_id).get_regions() {
                     for region in region_field {
                         self.delete_region(region);
                     }
                 }
-        
+
                 self.op_table.remove(&op_id.id());
             }
         }

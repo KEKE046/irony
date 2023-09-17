@@ -1,8 +1,7 @@
 use super::common::Id;
+use super::entity::EntityId;
 use super::environ::Environ;
 use super::operation::OpId;
-use super::entity::EntityId;
-
 
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct Region {
@@ -69,7 +68,6 @@ impl Region {
     }
 
     pub fn get_op_children(&self) -> Vec<OpId> { self.op_children.to_owned() }
-    pub fn get_entity_children(&self) -> Vec<EntityId> {
-        self.entity_children.to_owned()
-    }
+
+    pub fn get_entity_children(&self) -> Vec<EntityId> { self.entity_children.to_owned() }
 }

@@ -2,14 +2,11 @@ use std::panic::Location;
 
 use irony::{utils, OpId};
 
-
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ClkType;
 
 impl std::fmt::Display for ClkType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "i1")
-    }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "i1") }
 }
 
 #[derive(Clone, Debug, PartialEq, Hash)]
@@ -259,7 +256,6 @@ impl std::fmt::Display for OpIdAttr {
         write!(f, "{:#?}", self.0)
     }
 }
-
 
 pub type UIntAttr = IdAttr;
 

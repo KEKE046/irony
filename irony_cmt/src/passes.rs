@@ -3,9 +3,7 @@ use std::collections::HashSet;
 
 use irony::{Entity, Environ, Op, OpId, PassManagerTrait, PassTrait};
 
-
 use crate::{AttributeEnum, EntityEnum, OpEnum, StringAttr};
-
 
 #[derive(Debug, Clone)]
 pub struct RenamePass;
@@ -64,15 +62,16 @@ impl PassTrait<(), ()> for RenamePass {
                                         splits.push(last);
                                         break;
                                     }
-                                }
-                                _ => { break;}
+                                },
+                                _ => {
+                                    break;
+                                },
                             }
                         }
-                        
+
                         let name = splits.join("_");
                         name_set.insert(name.to_owned());
 
-                        
                         env.get_entity_entry(def).and_modify(|entity| {
                             entity.set_attrs(vec![(
                                 "name".to_owned(),
@@ -83,7 +82,7 @@ impl PassTrait<(), ()> for RenamePass {
                 },
             }
         }
-        
+
         Ok(())
     }
 }

@@ -238,7 +238,7 @@ impl Debug for ItprtMod {
 }
 
 impl ItprtMod {
-    pub fn from_cmt(env: &CmtEnv, op_id: OpId) -> Self {
+    pub fn from_cmt(env: &CmtIR, op_id: OpId) -> Self {
         // println!("try to create ItprtMod from {:?}", op_id);
 
         let op = env.get_op(op_id);
@@ -314,7 +314,7 @@ impl ItprtMod {
     }
 
     fn explore(
-        &mut self, env: &CmtEnv, region: RegionId, reducer: &mut IdReducer,
+        &mut self, env: &CmtIR, region: RegionId, reducer: &mut IdReducer,
         guard: ItprtGuard,
     ) {
         println!("explore region {:?}", region);

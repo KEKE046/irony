@@ -16,7 +16,6 @@ mod utils;
 
 // pub use interpret::*;
 
-
 irony::entity_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum]
 
@@ -46,7 +45,7 @@ irony::op_def! {
                 }
             )
         },
-        
+
         EventFrom: {
             defs: [lhs],
             uses: [rhs],
@@ -161,7 +160,7 @@ irony::op_def! {
         },
 
         // ------ END: define the operations in `sequence` dialect -------
-        
+
         // ------ BEGIN: define the operations in `property` dialect -------
 
         PrptFromSqn: {
@@ -229,7 +228,7 @@ irony::op_def! {
                 }
             )
         },
-        
+
         PrptConjunction: {
             defs: [rst],
             uses: [a, b],
@@ -241,9 +240,9 @@ irony::op_def! {
 
                     format!("{} = property.and {}, {}", lhs, a, b)
                 }
-            )         
+            )
         },
-        
+
         PrptImplica: {
             defs: [rst],
             uses: [a, b],
@@ -255,7 +254,7 @@ irony::op_def! {
 
                     format!("{} = property.implica {}, {}", lhs, a, b)
                 }
-            )  
+            )
         },
 
         PrptSynth: {
@@ -273,7 +272,7 @@ irony::op_def! {
             )
         },
 
-        
+
         // ------ END: define the operations in `property` dialect -------
 
         // ------ BEGIN: define the operations in `temporary` dialect -------
@@ -872,10 +871,10 @@ irony::op_def! {
         //         }
         //     )
         // },
-        
+
         // ------ END: define the operations in `seq` dialect -------
 
-        
+
         // ------ BEGIN: define the operations in `interpret` dialect -------
         ItprtCondCheck: {
             defs: [],
@@ -898,13 +897,13 @@ irony::op_def! {
 
         // ------ END: define the operations in `interpret` dialect -------
 
-        
+
     }
 }
 
 irony::environ_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, entity = EntityEnum, op = OpEnum, constraint = ConstraintEnum, pm = PassManager]
-    struct CmtEnv;
+    struct CmtIR;
 }
 
 pub(crate) const NONE: NONE = NONE::const_new(None);
@@ -916,38 +915,32 @@ pub struct IdReducer {
 }
 
 impl ReducerTrait for IdReducer {
-
     fn reduce_entity(&mut self, id: EntityId) -> usize {
         let len = self.entity_set.len();
         match self.entity_set.entry(id) {
-            std::collections::hash_map::Entry::Occupied(entry) => {
-                *entry.get()
-            },
+            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let new_id = len;
                 entry.insert(new_id);
                 new_id
-            }
+            },
         }
     }
 
     fn reduce_op(&mut self, id: OpId) -> usize {
         let len = self.op_set.len();
         match self.op_set.entry(id) {
-            std::collections::hash_map::Entry::Occupied(entry) => {
-                *entry.get()
-            },
+            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let new_id = len;
                 entry.insert(new_id);
                 new_id
-            }
+            },
         }
     }
 }
 
-
-impl CmtEnv {
+impl CmtIR {
     pub fn new() -> Self {
         let mut this = Self::default();
         this.add_entity(NONE.into());
@@ -957,38 +950,37 @@ impl CmtEnv {
     }
 
     pub fn hash_op(&mut self, op: OpId) -> Option<OpId> {
-        
-            self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
-            let mut id_reducer = IdReducer::default();
+        self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
+        let mut id_reducer = IdReducer::default();
 
-            self.get_op(op).hash_with_reducer(self, &mut id_reducer);
-            
-            let hash_value = self.hasher.borrow_mut().finish();
+        self.get_op(op).hash_with_reducer(self, &mut id_reducer);
 
-            let parent = self.get_op(op).get_parent();
+        let hash_value = self.hasher.borrow_mut().finish();
 
-            // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
+        let parent = self.get_op(op).get_parent();
 
-            let (deletion, final_op_id) = match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
+        // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
+
+        let (deletion, final_op_id) =
+            match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
                 std::collections::hash_map::Entry::Occupied(entry) => {
-                    
                     (true, Some(OpId::from(*entry.get())))
                 },
                 std::collections::hash_map::Entry::Vacant(entry) => {
                     entry.insert(op);
                     (false, Some(op))
-                }
+                },
             };
 
-            if deletion {
-                self.delete_op(op);
-            }
+        if deletion {
+            self.delete_op(op);
+        }
 
-            final_op_id
+        final_op_id
     }
 }
 
-impl Drop for CmtEnv {
+impl Drop for CmtIR {
     fn drop(&mut self) { self.end_region(); }
 }
 

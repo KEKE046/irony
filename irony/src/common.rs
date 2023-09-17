@@ -8,7 +8,6 @@ pub trait ReducerTrait {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Symbol {
     name: Option<String>,

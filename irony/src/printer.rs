@@ -4,8 +4,7 @@ pub trait OpPrinterTrait {
     type DataTypeT;
     type AttributeT: Clone + PartialEq + std::fmt::Display;
     fn print<'env, E, EntityT: Entity>(
-        &self, env: &'env E,
-        attrs: Vec<(String, Self::AttributeT)>,
+        &self, env: &'env E, attrs: Vec<(String, Self::AttributeT)>,
         uses: Vec<(String, Vec<Option<EntityId>>)>,
         defs: Vec<(String, Vec<Option<EntityId>>)>,
         regions: Vec<(String, Vec<RegionId>)>,

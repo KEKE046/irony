@@ -6,8 +6,8 @@ mod hw_test {
 
     use crate::*;
 
-    pub fn create() -> (CmtEnv, OpId) {
-        let mut cmt = CmtEnv::default();
+    pub fn create() -> (CmtIR, OpId) {
+        let mut cmt = CmtIR::default();
 
         let module_pass_body = cmt.add_region(Region::new(true));
         let module_pass_def = cmt.add_op(
@@ -214,7 +214,7 @@ mod hw_test {
 
     #[test]
     pub fn module_constraint_test() {
-        let mut circt = CmtEnv::default();
+        let mut circt = CmtIR::default();
 
         let module_body = circt.add_region(Region::new(true));
         let module_def = circt.add_op(
@@ -265,7 +265,7 @@ mod hw_test {
 
     #[test]
     pub fn instance_constraint_test() {
-        let mut circt = CmtEnv::default();
+        let mut circt = CmtIR::default();
 
         let module_pass_body = circt.add_region(Region::new(true));
         let module_pass_def = circt.add_op(

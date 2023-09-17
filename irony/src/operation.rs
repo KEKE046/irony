@@ -540,7 +540,7 @@ macro_rules! op_enum {
                     $($name::$variant(inner) => inner.hash_with_reducer(env, reducer)),*
                 }
             }
-            
+
             fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self {
                 match self {
                     $name::None => panic!(),
