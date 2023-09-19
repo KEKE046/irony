@@ -407,7 +407,8 @@ impl DataTypeEnum {
             DataTypeEnum::Struct(StructType(v_field_type)) => {
                 v_field_type.iter().map(|(_, dtype)| dtype.width()).sum()
             },
-            _ => unimplemented!(),
+            DataTypeEnum::Clk(_) => 1,
+            _ => unimplemented!()
         }
     }
 }
