@@ -257,7 +257,27 @@ impl std::fmt::Display for OpIdAttr {
     }
 }
 
-pub type UIntAttr = IdAttr;
+
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct UIntAttr(pub u32);
+
+impl Into<UIntAttr> for u32 {
+    fn into(self) -> UIntAttr { UIntAttr(self) }
+}
+impl Into<UIntAttr> for usize {
+    fn into(self) -> UIntAttr { UIntAttr(self as u32) }
+}
+
+impl Into<u32> for UIntAttr {
+    fn into(self) -> u32 { self.0 }
+}
+
+impl std::fmt::Display for UIntAttr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self.0)
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct TypeAttr(pub DataTypeEnum);
@@ -388,6 +408,7 @@ irony::attribute_enum! {
         BoolAttr(BoolAttr),
         LocationAttr(LocationAttr),
         IdAttr(IdAttr),
+        UIntAttr(UIntAttr),
         OpIdAttr(OpIdAttr),
         StringAttr(StringAttr),
         TypeAttr(TypeAttr),

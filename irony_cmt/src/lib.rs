@@ -481,8 +481,14 @@ irony::op_def! {
             defs: [; inputs],
             uses: [],
             print: (
-                |_, _, _, _, _| {
-                    format!("")
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>,  _| {
+                    let inputs = defs[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    let input_types = defs[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("// hw.input {} : {}", inputs, input_types)
                 }
             )
         },
@@ -498,7 +504,7 @@ irony::op_def! {
                     let output_types = uses[0].1.iter().map(|id| {
                         format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.output {}: {}", outputs, output_types)
+                    format!("hw.output {} : {}", outputs, output_types)
                 }
             )
         },
@@ -750,26 +756,41 @@ irony::op_def! {
         //         }
         //     )
         // },
-        // CombExtract: {
-        //     defs: [lhs],
-        //     uses: [input, low],
-        //     constraints: [/* TODO: fill this */],
-        //     print: (
-        //         |_, _, _, _, _| {
-        //             unimplemented!()
-        //         }
-        //     )
-        // },
-        // CombConcat: {
-        //     defs: [lhs],
-        //     uses: [; operands],
-        //     constraints: [/* TODO: fill this */],
-        //     print: (
-        //         |_, _, _, _, _| {
-        //             unimplemented!()
-        //         }
-        //     )
-        // },
+        CombExtract: {
+            defs: [lhs],
+            uses: [input],
+            attrs: [low: UIntAttr(UIntAttr)],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String,Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let input = env.print_entity(uses[0].1[0].unwrap());
+                    let AttributeEnum::UIntAttr(low) = irony::utils::extract_vec(&attrs, "low").unwrap() else {panic!("")};
+                    let input_type = env.get_entity(uses[0].1[0].unwrap()).get_dtype().unwrap();
+                    let lhs_type = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+
+                    format!("{} = comb.extract {} from {} : ({}) -> {}", lhs, input, low, input_type, lhs_type)
+                }
+            )
+        },
+        CombConcat: {
+            defs: [lhs],
+            uses: [; operands],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+
+                    let operands = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let op_types = uses[0].1.iter().map(|id| {
+                        format!("{}", env.get_entity((*id).unwrap()).get_dtype().unwrap())
+                    }).collect::<Vec<_>>().join(", ");
+
+                    format!("{} = comb.concat {} : {}", lhs, operands, op_types)
+                }
+            )
+        },
         // CombReplicate: {
         //     defs: [lhs],
         //     uses: [rhs],

@@ -40,6 +40,7 @@ pub trait Environ: Sized {
     fn get_ops_with_parent(&self, id: Option<RegionId>) -> Vec<OpId>;
     fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
     fn get_region(&self, id: RegionId) -> &Region;
+    fn get_region_entry(&mut self, region_id: RegionId) -> indexmap::map::Entry<usize, Region>;
     fn add_region(&mut self, region: Region) -> RegionId;
     fn add_op(&mut self, op: Self::OpT) -> OpId;
     fn set_entity_parent(&mut self, id: EntityId);
@@ -341,6 +342,10 @@ macro_rules! environ_def {
                 }
             }
 
+            fn get_region_entry(&mut self, region_id: irony::RegionId) -> indexmap::map::Entry<usize, irony::Region> {
+                self.region_table.entry(region_id.id())
+            }
+            
             fn add_region(&mut self, region: irony::Region) -> irony::RegionId {
                 let (id, _) = self.region_table.insert_with_id(region);
                 irony::RegionId(id)

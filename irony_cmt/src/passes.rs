@@ -88,8 +88,42 @@ impl PassTrait<(), ()> for RenamePass {
 }
 
 #[derive(Debug, Clone)]
+pub struct MoveOutputToTailPass;
+
+impl PassTrait<(), ()> for MoveOutputToTailPass {
+    type EntityT = EntityEnum;
+    type OpT = OpEnum;
+
+    fn check_op<E>(&self, env: &E, op: OpId) -> bool
+    where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
+        match env.get_op(op) {
+            OpEnum::HwModule(_) => true,
+            _ => false,
+        }
+    }
+
+    fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
+    where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
+        let region = env.get_op(op).get_regions()[0].1[0];
+
+        let mut included = env.get_region(region).op_children.to_owned();
+        if let Some(index) = included.iter().position(|op| matches!(env.get_op(op.to_owned()), OpEnum::HwOutput(_))) {
+            let x =included.remove(index);
+            included.push(x);
+        };
+
+        env.get_region_entry(region).and_modify(|region| {
+            region.op_children = included;
+        });
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum PassEnum {
     RenamePass(RenamePass),
+    MoveOutputToTailPass(MoveOutputToTailPass),
 }
 
 impl PassTrait<(), ()> for PassEnum {
@@ -100,6 +134,7 @@ impl PassTrait<(), ()> for PassEnum {
     where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
         match self {
             PassEnum::RenamePass(pass) => pass.check_op(env, op_id),
+            PassEnum::MoveOutputToTailPass(pass) => pass.check_op(env, op_id),
         }
     }
 
@@ -107,6 +142,7 @@ impl PassTrait<(), ()> for PassEnum {
     where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
         match self {
             PassEnum::RenamePass(pass) => pass.run_raw(env, op_id),
+            PassEnum::MoveOutputToTailPass(pass) => pass.run_raw(env, op_id),
         }
     }
 }
