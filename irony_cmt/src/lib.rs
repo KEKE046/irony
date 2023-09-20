@@ -12,7 +12,7 @@ pub use constraints::*;
 pub use indexmap;
 pub use passes::*;
 
-mod utils;
+mod cmt_utils;
 
 // pub use interpret::*;
 
@@ -21,7 +21,7 @@ irony::entity_def! {
 
     EntityEnum = {
         NONE: [],
-        Event: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        IREvent: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
