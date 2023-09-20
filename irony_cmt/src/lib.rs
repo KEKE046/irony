@@ -85,15 +85,15 @@ irony::op_def! {
             )
         },
 
-        EventUnion: {
-            defs: [],
-            uses: [father, son],
+        EventIs: {
+            defs: [son],
+            uses: [father],
             print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
                     let father = env.print_entity(uses[0].1[0].unwrap());
-                    let son = env.print_entity(uses[1].1[0].unwrap());
+                    let son = env.print_entity(defs[0].1[0].unwrap());
 
-                    format!("event.union {} <- {}", father, son)
+                    format!("{} = event.is {}",  son, father)
                 }
             )
         },
