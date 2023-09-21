@@ -39,7 +39,7 @@ irony::op_def! {
         StmtSynth: {
             defs: [],
             uses: [stmt, clk; protocol_events],
-            attrs: [protocol: ArrayAttr(ArrayAttr)(*)],
+            attrs: [protocol_event_names: ArrayAttr(ArrayAttr)(*)],
             print: (
                 |env:&E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
 
@@ -47,8 +47,8 @@ irony::op_def! {
                     let protocol_events = uses[2].1.to_owned().into_iter().map(|id| {
                         format!("{}", env.print_entity(id.unwrap()))
                     });
-                    let AttributeEnum::ArrayAttr(protocol) = irony::utils::extract_vec(&attrs, "protocol").unwrap() else { panic!("")};
-                    let mut protocol = protocol.0.iter().zip(protocol_events).map(|(name, event)| {
+                    let AttributeEnum::ArrayAttr(protocol_event_names) = irony::utils::extract_vec(&attrs, "protocol_event_names").unwrap() else { panic!("")};
+                    let mut protocol = protocol_event_names.0.iter().zip(protocol_events).map(|(name, event)| {
                         format!("{}: {}", name, event)
                     }).collect::<Vec<_>>().join(", ");
                     
@@ -106,18 +106,8 @@ irony::op_def! {
 
         // ------ BEGIN: define the operations in `event` dialect -------
 
-        EventDef: {
-            defs: [lhs],
-            uses: [],
-            print: (
-                |env: &E, _, _, def: Vec<(String, Vec<Option<EntityId>>)>, _|  {
-                    let lhs = env.print_entity(def[0].1[0].unwrap());
-                    format!("{} = event.define", lhs)
-                }
-            )
-        },
 
-        EventFrom: {
+        EventFromSignal: {
             defs: [lhs],
             uses: [rhs],
             print: (
@@ -129,6 +119,7 @@ irony::op_def! {
             )
         },
 
+        
         EventEval: {
             defs: [lhs],
             uses: [rhs],
@@ -141,46 +132,62 @@ irony::op_def! {
             )
         },
 
+        
         EventBlockDef: {
-            defs: [],
-            uses: [event],
+            defs: [event],
+            uses: [],
             regions: [body],
             print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _,  regions: Vec<(String, Vec<RegionId>)>| {
-                    let event = env.print_entity(uses[0].1[0].unwrap());
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>,  regions: Vec<(String, Vec<RegionId>)>| {
+                    let event = env.print_entity(defs[0].1[0].unwrap());
 
                     let body = env.print_region(regions[0].1[0]);
 
-                    format!("event.block {} {{\n{}\n}}",  event, body)
+                    format!("{} = event.block {{\n{}\n}}",  event, body)
                 }
             )
         },
 
-        EventIs: {
-            defs: [son],
-            uses: [father],
+        EventGuardDef: {
+            defs: [event],
+            uses: [; wires],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let father = env.print_entity(uses[0].1[0].unwrap());
-                    let son = env.print_entity(defs[0].1[0].unwrap());
-
-                    format!("{} = event.is {}",  son, father)
+                    let event = env.print_entity(defs[0].1[0].unwrap());
+                    let wires = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = event.guard {}", event, wires)
                 }
             )
         },
 
-        EventElseOf: {
+        EventRawDef: {
+            defs: [event],
+            uses: [],
+            print: (
+                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let event = env.print_entity(defs[0].1[0].unwrap());
+                    format!("{} = event.def", event)
+                }
+            )
+        },
+
+
+        EventCover: {
             defs: [],
-            uses: [e, t],
+            uses: [father; sons],
             print: (
                 |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
-                    let e = env.print_entity(uses[0].1[0].unwrap());
-                    let t = env.print_entity(uses[1].1[0].unwrap());
-
-                    format!("event.else_of {} <- {}", e, t)
+                    let father = env.print_entity(uses[0].1[0].unwrap());
+                    let sons = uses[1].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("event.cover {} on {}",  father, sons)
                 }
             )
         },
+
 
         // ------ END: define the operations in `event` dialect -------
 
