@@ -21,6 +21,7 @@ irony::entity_def! {
 
     EntityEnum = {
         NONE: [],
+        IRStmt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         IREvent: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
@@ -32,6 +33,76 @@ irony::op_def! {
     [data_type = DataTypeEnum, attr = AttributeEnum, constraint = ConstraintEnum]
 
     OpEnum = {
+
+        // ------ BEGIN: define the operations in `stmt` dialect -------
+        
+        StmtSynth: {
+            defs: [],
+            uses: [stmt, clk; protocol_events],
+            attrs: [protocol: ArrayAttr(ArrayAttr)(*)],
+            print: (
+                |env:&E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+
+                    let stmt = env.print_entity(uses[0].1[0].unwrap());
+                    let protocol_events = uses[2].1.to_owned().into_iter().map(|id| {
+                        format!("{}", env.print_entity(id.unwrap()))
+                    });
+                    let AttributeEnum::ArrayAttr(protocol) = irony::utils::extract_vec(&attrs, "protocol").unwrap() else { panic!("")};
+                    let mut protocol = protocol.0.iter().zip(protocol_events).map(|(name, event)| {
+                        format!("{}: {}", name, event)
+                    }).collect::<Vec<_>>().join(", ");
+                    
+                    if let Some(clk) = uses[1].1[0].to_owned() {
+                        protocol += format!(", clk: {}", env.print_entity(clk.to_owned())).as_ref();
+                    }
+
+                    format!("stmt.synth {} into protocol {{{}}}", stmt, protocol)
+                }
+            )
+        },
+
+        StmtSeq: {
+            defs: [lhs],
+            uses: [; sub_stmts],
+            print: (
+                |env:&E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let sub_stmts = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = stmt.seq {}", lhs, sub_stmts)
+                }
+            )
+        },
+
+        StmtStep: {
+            defs: [lhs],
+            uses: [; events, wait_at_exist],
+            print: (
+                |env:&E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+
+                    let events = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let wait_at_exit = uses[1].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+
+                    let wait_at_exit = if wait_at_exit.is_empty() {
+                        format!("")
+                    } else {
+                        format!("wait-at-exit: {}", wait_at_exit)
+                    };
+
+                    format!("{} = stmt.step {} {{{}}}", lhs, events, wait_at_exit)
+
+                }
+            )
+        },
+        // ------ END: define the operations in `stmt` dialect -------
+
 
         // ------ BEGIN: define the operations in `event` dialect -------
 
