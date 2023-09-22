@@ -61,20 +61,6 @@ irony::op_def! {
             )
         },
 
-        StmtSeq: {
-            defs: [lhs],
-            uses: [; sub_stmts],
-            print: (
-                |env:&E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let lhs = env.print_entity(defs[0].1[0].unwrap());
-                    let sub_stmts = uses[0].1.iter().map(|id| {
-                        format!("{}", env.print_entity((*id).unwrap()))
-                    }).collect::<Vec<_>>().join(", ");
-                    format!("{} = stmt.seq {}", lhs, sub_stmts)
-                }
-            )
-        },
-
         StmtStep: {
             defs: [lhs],
             uses: [; events, wait_at_exist],
@@ -98,6 +84,93 @@ irony::op_def! {
 
                     format!("{} = stmt.step {} {{{}}}", lhs, events, wait_at_exit)
 
+                }
+            )
+        },
+        
+        StmtSeq: {
+            defs: [lhs],
+            uses: [; sub_stmts],
+            print: (
+                |env:&E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let sub_stmts = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = stmt.seq {}", lhs, sub_stmts)
+                }
+            )
+        },
+
+        StmtIf: {
+            defs: [lhs],
+            uses: [cond, then_stmt, else_stmt],
+            print: (
+                |env:&E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let cond = env.print_entity(uses[0].1[0].unwrap());
+                    let then_stmt = format!("then {{{}}}", env.print_entity(uses[1].1[0].unwrap()));
+                    let else_stmt = match uses[2].1[0] {
+                        Some(id) => format!("else {{{}}}", env.print_entity(id)),
+                        None => format!(""),
+                    };
+                    format!("{} = stmt.if {} {} {}", lhs, cond, then_stmt, else_stmt)
+                }
+            )
+        },
+
+        StmtFor: {
+            defs: [lhs],
+            uses: [indvar_rd, indvar_wr, do_stmt, start, end],
+            attrs: [incr: BoolAttr(BoolAttr)(*), const_start: UIntAttr(UIntAttr)(*), const_end: UIntAttr(UIntAttr)(*), const_step: UIntAttr(UIntAttr)(*)],
+            print: (
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let indvar_rd = env.print_entity(uses[0].1[0].unwrap());
+                    let indvar_wr = env.print_entity(uses[1].1[0].unwrap());
+                    let do_stmt = env.print_entity(uses[2].1[0].unwrap());
+                    let start = match irony::utils::extract_vec(&attrs, "const_start") {
+                        Some(x) => format!("{}", x),
+                        None => env.print_entity(uses[3].1[0].unwrap()),
+                    };
+                    let end = match irony::utils::extract_vec(&attrs, "const_end") {
+                        Some(x) => format!("{}", x),
+                        None => env.print_entity(uses[4].1[0].unwrap()),
+                    };
+                    let incr = if let AttributeEnum::BoolAttr(BoolAttr(x)) = irony::utils::extract_vec(&attrs, "incr").unwrap() {x} else { panic!("")};
+                    let incr = if incr { "to" } else { "downto" };
+                    let step = match irony::utils::extract_vec(&attrs, "const_step") {
+                        Some(x) => format!("{}", x),
+                        None => format!("1"),
+                    };
+                    format!("{} = stmt.for ({}, {}) = {} {} {} step {} do {}", lhs, indvar_rd, indvar_wr, start, incr, end, step, do_stmt)
+                }
+            )
+        },
+
+        StmtWhile: {
+            defs: [lhs],
+            uses: [cond, do_stmt],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let cond = env.print_entity(uses[0].1[0].unwrap());
+                    let do_stmt = env.print_entity(uses[1].1[0].unwrap());
+                    format!("{} = stmt.while {} do {}", lhs, cond, do_stmt)
+                }
+            )
+        },
+
+        StmtPar: {
+            defs: [lhs],
+            uses: [;stmts],
+            print: (
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs:Vec<(String, Vec<Option<EntityId>>)>, _| {
+                    let lhs = env.print_entity(defs[0].1[0].unwrap());
+                    let stmts = uses[0].1.iter().map(|id| {
+                        format!("{}", env.print_entity((*id).unwrap()))
+                    }).collect::<Vec<_>>().join(", ");
+                    format!("{} = stmt.par {}", lhs, stmts)
                 }
             )
         },
