@@ -1,43 +1,43 @@
 use crate::{EntityId, OpId};
 
 pub trait ReducerTrait {
-    fn reduce_entity(&mut self, id: EntityId) -> usize;
-    fn reduce_op(&mut self, id: OpId) -> usize;
-    fn reduce_option_entity(&mut self, id: Option<EntityId>) -> Option<EntityId> {
-        id.map(|x| EntityId(self.reduce_entity(x)))
-    }
+  fn reduce_entity(&mut self, id: EntityId) -> usize;
+  fn reduce_op(&mut self, id: OpId) -> usize;
+  fn reduce_option_entity(&mut self, id: Option<EntityId>) -> Option<EntityId> {
+    id.map(|x| EntityId(self.reduce_entity(x)))
+  }
 }
 
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Symbol {
-    name: Option<String>,
+  name: Option<String>,
 }
 
 impl Symbol {
-    pub fn new(name: String) -> Self { Self { name: Some(name) } }
+  pub fn new(name: String) -> Self { Self { name: Some(name) } }
 }
 
 pub trait Id {
-    fn id(&self) -> usize;
-    fn set_id(&mut self, id: usize);
+  fn id(&self) -> usize;
+  fn set_id(&mut self, id: usize);
 }
 
 impl Id for usize {
-    fn id(&self) -> usize { *self }
+  fn id(&self) -> usize { *self }
 
-    fn set_id(&mut self, _id: usize) { panic!("cannot set id to usize") }
+  fn set_id(&mut self, _id: usize) { panic!("cannot set id to usize") }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub struct ConstValueU32<D: Clone> {
-    pub value: u32,
-    pub dtype: D,
+  pub value: u32,
+  pub dtype: D,
 }
 
 impl<D: Clone> std::fmt::Display for ConstValueU32<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.value)
+  }
 }
 
 #[macro_export]

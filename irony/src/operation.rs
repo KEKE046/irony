@@ -8,62 +8,62 @@ use crate::printer::OpPrinterTrait;
 use crate::{ConstraintTrait, Environ, ReducerTrait, RegionId};
 
 pub trait Op: Id + Debug {
-    type DataTypeT;
-    type AttributeT;
-    type ConstraintT: ConstraintTrait<
-        DataTypeT = Self::DataTypeT,
-        AttributeT = Self::AttributeT,
-    >;
-    type PrinterT: OpPrinterTrait<
-        DataTypeT = Self::DataTypeT,
-        AttributeT = Self::AttributeT,
-    >;
+  type DataTypeT;
+  type AttributeT;
+  type ConstraintT: ConstraintTrait<
+    DataTypeT = Self::DataTypeT,
+    AttributeT = Self::AttributeT,
+  >;
+  type PrinterT: OpPrinterTrait<
+    DataTypeT = Self::DataTypeT,
+    AttributeT = Self::AttributeT,
+  >;
 
-    fn get_defs(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
-    fn get_uses(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
+  fn get_defs(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
+  fn get_uses(&self) -> Vec<(String, Vec<Option<EntityId>>)>;
 
-    fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
-    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> ();
-    fn get_constraints(&self) -> Vec<Self::ConstraintT>;
+  fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+  fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>) -> ();
+  fn get_constraints(&self) -> Vec<Self::ConstraintT>;
 
-    fn uses(&self, entity: EntityId) -> bool;
-    fn defs(&self, entity: EntityId) -> bool;
+  fn uses(&self, entity: EntityId) -> bool;
+  fn defs(&self, entity: EntityId) -> bool;
 
-    fn get_parent(&self) -> Option<RegionId>;
-    fn set_parent(&mut self, parent: Option<RegionId>);
+  fn get_parent(&self) -> Option<RegionId>;
+  fn set_parent(&mut self, parent: Option<RegionId>);
 
-    fn get_regions(&self) -> Vec<(String, Vec<RegionId>)>;
+  fn get_regions(&self) -> Vec<(String, Vec<RegionId>)>;
 
-    fn use_region(&self, region: RegionId) -> bool;
+  fn use_region(&self, region: RegionId) -> bool;
 
-    fn get_op_name(&self) -> String;
+  fn get_op_name(&self) -> String;
 
-    fn get_printer(&self) -> Self::PrinterT;
+  fn get_printer(&self) -> Self::PrinterT;
 
-    fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait);
+  fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait);
 
-    fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self;
+  fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self;
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Hash, Eq, Default)]
 pub struct OpId(pub usize);
 impl From<usize> for OpId {
-    fn from(value: usize) -> Self { Self(value) }
+  fn from(value: usize) -> Self { Self(value) }
 }
 impl Id for OpId {
-    fn id(&self) -> usize { self.0 }
+  fn id(&self) -> usize { self.0 }
 
-    fn set_id(&mut self, id: usize) { self.0 = id }
+  fn set_id(&mut self, id: usize) { self.0 = id }
 }
 
 #[macro_export]
 macro_rules! reduce_then_hash {
-    ($reducer:ident, $target:expr, $hasher:expr) => {{
-        let __target = $target;
-        let __reduced = $reducer.reduce_entity(__target);
-        __reduced.hash($hasher);
-        // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
-    }};
+  ($reducer:ident, $target:expr, $hasher:expr) => {{
+    let __target = $target;
+    let __reduced = $reducer.reduce_entity(__target);
+    __reduced.hash($hasher);
+    // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
+  }};
 }
 #[macro_export]
 macro_rules! op_def {

@@ -24,12 +24,12 @@ pub use printer::*;
 pub use region::*;
 
 pub mod preclude {
-    pub use std::cell::{RefCell, RefMut};
-    pub use std::hash::Hash;
-    pub use std::ops::DerefMut;
-    pub use std::rc::Rc;
+  pub use std::cell::{RefCell, RefMut};
+  pub use std::hash::Hash;
+  pub use std::ops::DerefMut;
+  pub use std::rc::Rc;
 
-    pub use super::*;
+  pub use super::*;
 }
 
 pub use indexmap;

@@ -25,7 +25,7 @@ irony::entity_def! {
         IREvent: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Sqn: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
         Prpt: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
-        Wire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
+        IRWire: [name: StringAttr(StringAttr), debug: BoolAttr(BoolAttr), location: LocationAttr(LocationAttr)],
     }
 }
 
@@ -35,7 +35,7 @@ irony::op_def! {
     OpEnum = {
 
         // ------ BEGIN: define the operations in `stmt` dialect -------
-        
+
         StmtSynth: {
             defs: [],
             uses: [stmt, clk; protocol_events],
@@ -51,7 +51,7 @@ irony::op_def! {
                     let mut protocol = protocol_event_names.0.iter().zip(protocol_events).map(|(name, event)| {
                         format!("{}: {}", name, event)
                     }).collect::<Vec<_>>().join(", ");
-                    
+
                     if let Some(clk) = uses[1].1[0].to_owned() {
                         protocol += format!(", clk: {}", env.print_entity(clk.to_owned())).as_ref();
                     }
@@ -87,7 +87,7 @@ irony::op_def! {
                 }
             )
         },
-        
+
         StmtSeq: {
             defs: [lhs],
             uses: [; sub_stmts],
@@ -192,7 +192,7 @@ irony::op_def! {
             )
         },
 
-        
+
         EventEval: {
             defs: [lhs],
             uses: [rhs],
@@ -205,7 +205,7 @@ irony::op_def! {
             )
         },
 
-        
+
         EventBlockDef: {
             defs: [event],
             uses: [],
@@ -256,7 +256,12 @@ irony::op_def! {
                     let sons = uses[1].1.iter().map(|id| {
                         format!("{}", env.print_entity((*id).unwrap()))
                     }).collect::<Vec<_>>().join(", ");
-                    format!("event.cover {} on {}",  father, sons)
+
+                    if sons.is_empty() {
+                        format!("")
+                    } else {
+                        format!("event.cover {} on {}",  father, sons)
+                    }
                 }
             )
         },
@@ -1082,78 +1087,78 @@ pub(crate) const NONE: NONE = NONE::const_new(None);
 
 #[derive(Default, Debug)]
 pub struct IdReducer {
-    entity_set: FxHashMap<EntityId, usize>,
-    op_set: FxHashMap<OpId, usize>,
+  entity_set: FxHashMap<EntityId, usize>,
+  op_set: FxHashMap<OpId, usize>,
 }
 
 impl ReducerTrait for IdReducer {
-    fn reduce_entity(&mut self, id: EntityId) -> usize {
-        let len = self.entity_set.len();
-        match self.entity_set.entry(id) {
-            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                let new_id = len;
-                entry.insert(new_id);
-                new_id
-            },
-        }
+  fn reduce_entity(&mut self, id: EntityId) -> usize {
+    let len = self.entity_set.len();
+    match self.entity_set.entry(id) {
+      std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
+      std::collections::hash_map::Entry::Vacant(entry) => {
+        let new_id = len;
+        entry.insert(new_id);
+        new_id
+      },
     }
+  }
 
-    fn reduce_op(&mut self, id: OpId) -> usize {
-        let len = self.op_set.len();
-        match self.op_set.entry(id) {
-            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                let new_id = len;
-                entry.insert(new_id);
-                new_id
-            },
-        }
+  fn reduce_op(&mut self, id: OpId) -> usize {
+    let len = self.op_set.len();
+    match self.op_set.entry(id) {
+      std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
+      std::collections::hash_map::Entry::Vacant(entry) => {
+        let new_id = len;
+        entry.insert(new_id);
+        new_id
+      },
     }
+  }
 }
 
 impl CmtIR {
-    pub fn new() -> Self {
-        let mut this = Self::default();
-        this.add_entity(NONE.into());
+  pub fn new() -> Self {
+    let mut this = Self::default();
+    this.add_entity(NONE.into());
 
-        this.begin_region(None);
-        this
+    this.begin_region(None);
+    this
+  }
+
+  pub fn hash_op(&mut self, op: OpId) -> Option<OpId> {
+    self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
+    let mut id_reducer = IdReducer::default();
+
+    self.get_op(op).hash_with_reducer(self, &mut id_reducer);
+
+    let hash_value = self.hasher.borrow_mut().finish();
+
+    let parent = self.get_op(op).get_parent();
+
+    // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
+
+    let (deletion, final_op_id) =
+      match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
+        std::collections::hash_map::Entry::Occupied(entry) => {
+          (true, Some(OpId::from(*entry.get())))
+        },
+        std::collections::hash_map::Entry::Vacant(entry) => {
+          entry.insert(op);
+          (false, Some(op))
+        },
+      };
+
+    if deletion {
+      self.delete_op(op);
     }
 
-    pub fn hash_op(&mut self, op: OpId) -> Option<OpId> {
-        self.hasher.replace(irony::FxHasherBuilder::default().build_hasher());
-        let mut id_reducer = IdReducer::default();
-
-        self.get_op(op).hash_with_reducer(self, &mut id_reducer);
-
-        let hash_value = self.hasher.borrow_mut().finish();
-
-        let parent = self.get_op(op).get_parent();
-
-        // println!("hash_op op: {:#?}, parent: {:#?}, hash_value: {:#?}", op, parent, hash_value);
-
-        let (deletion, final_op_id) =
-            match self.op_hash_table.entry(OpHashT(parent, hash_value)) {
-                std::collections::hash_map::Entry::Occupied(entry) => {
-                    (true, Some(OpId::from(*entry.get())))
-                },
-                std::collections::hash_map::Entry::Vacant(entry) => {
-                    entry.insert(op);
-                    (false, Some(op))
-                },
-            };
-
-        if deletion {
-            self.delete_op(op);
-        }
-
-        final_op_id
-    }
+    final_op_id
+  }
 }
 
 impl Drop for CmtIR {
-    fn drop(&mut self) { self.end_region(); }
+  fn drop(&mut self) { self.end_region(); }
 }
 
 #[cfg(test)]

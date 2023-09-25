@@ -13,62 +13,62 @@ pub struct Value {
 }
 
 pub trait DefUseTopo {
-    fn get_defs(&self) -> Vec<usize>;
-    fn get_uses(&self) -> Vec<usize>;
+    fn get_defs(&self) -> Vec<u32>;
+    fn get_uses(&self) -> Vec<u32>;
     fn initialize(&mut self) -> ();
-    fn update(&mut self, new_use: usize) -> bool;
+    fn update(&mut self, new_use: u32) -> bool;
     fn ready(&self) -> bool;
 }
 
 #[derive(Debug, Default)]
 pub struct ListenChannel {
-    pub channels: Vec<usize>,
-    pub values: Vec<usize>,
+    pub channels: Vec<u32>,
+    pub values: Vec<u32>,
 }
 
 impl ListenChannel {
-    pub fn new(channels: Vec<usize>, values: Vec<usize>) -> Self {
+    pub fn new(channels: Vec<u32>, values: Vec<u32>) -> Self {
         Self { channels, values }
     }
 }
 
 impl DefUseTopo for ListenChannel {
-    fn get_defs(&self) -> Vec<usize> { self.values.to_owned() }
+    fn get_defs(&self) -> Vec<u32> { self.values.to_owned() }
 
-    fn get_uses(&self) -> Vec<usize> { Vec::new() }
+    fn get_uses(&self) -> Vec<u32> { Vec::new() }
 
     fn initialize(&mut self) -> () {}
 
-    fn update(&mut self, _new_use: usize) -> bool { true }
+    fn update(&mut self, _new_use: u32) -> bool { true }
 
     fn ready(&self) -> bool { true }
 }
 
 #[derive(Debug, Default)]
 pub struct WriteChannel {
-    pub channels: Vec<usize>,
-    pub values: Vec<usize>,
+    pub channels: Vec<u32>,
+    pub values: Vec<u32>,
     pub status: Vec<bool>,
-    pub waited_n: usize,
+    pub waited_n: u32,
 }
 
 impl WriteChannel {
-    pub fn new(channels: Vec<usize>, values: Vec<usize>) -> Self {
+    pub fn new(channels: Vec<u32>, values: Vec<u32>) -> Self {
         Self { channels, values, ..Self::default() }
     }
 }
 
 impl DefUseTopo for WriteChannel {
-    fn get_defs(&self) -> Vec<usize> { Vec::new() }
+    fn get_defs(&self) -> Vec<u32> { Vec::new() }
 
-    fn get_uses(&self) -> Vec<usize> { self.values.to_owned() }
+    fn get_uses(&self) -> Vec<u32> { self.values.to_owned() }
 
     fn initialize(&mut self) -> () {
         self.waited_n = self.values.len();
         self.status = vec![false; self.waited_n];
     }
 
-    fn update(&mut self, new_use: usize) -> bool {
+    fn update(&mut self, new_use: u32) -> bool {
         let idx = self.values.iter().position(|&x| x == new_use);
         match idx {
             None => panic!("new_use {:?} not found in conds", new_use),
@@ -87,46 +87,46 @@ impl DefUseTopo for WriteChannel {
 
 #[derive(Debug, Default)]
 pub struct LdReg {
-    pub regs: Vec<usize>,
+    pub regs: Vec<u32>,
 }
 impl LdReg {
-    pub fn new(regs: Vec<usize>) -> Self { Self { regs } }
+    pub fn new(regs: Vec<u32>) -> Self { Self { regs } }
 }
 impl DefUseTopo for LdReg {
-    fn get_defs(&self) -> Vec<usize> { self.regs.to_owned() }
+    fn get_defs(&self) -> Vec<u32> { self.regs.to_owned() }
 
-    fn get_uses(&self) -> Vec<usize> { Vec::new() }
+    fn get_uses(&self) -> Vec<u32> { Vec::new() }
 
     fn initialize(&mut self) -> () {}
 
-    fn update(&mut self, _new_use: usize) -> bool { true }
+    fn update(&mut self, _new_use: u32) -> bool { true }
 
     fn ready(&self) -> bool { true }
 }
 
 #[derive(Debug, Default)]
 pub struct StReg {
-    pub values: Vec<usize>,
-    pub regs: Vec<usize>,
+    pub values: Vec<u32>,
+    pub regs: Vec<u32>,
     pub status: Vec<bool>,
-    pub waited_n: usize,
+    pub waited_n: u32,
 }
 impl StReg {
-    pub fn new(values: Vec<usize>, regs: Vec<usize>) -> Self {
+    pub fn new(values: Vec<u32>, regs: Vec<u32>) -> Self {
         Self { values, regs, ..Self::default() }
     }
 }
 impl DefUseTopo for StReg {
-    fn get_defs(&self) -> Vec<usize> { Vec::new() }
+    fn get_defs(&self) -> Vec<u32> { Vec::new() }
 
-    fn get_uses(&self) -> Vec<usize> { self.values.to_owned() }
+    fn get_uses(&self) -> Vec<u32> { self.values.to_owned() }
 
     fn initialize(&mut self) -> () {
         self.waited_n = self.values.len();
         self.status = vec![false; self.waited_n];
     }
 
-    fn update(&mut self, new_use: usize) -> bool {
+    fn update(&mut self, new_use: u32) -> bool {
         let idx = self.values.iter().position(|&x| x == new_use);
         match idx {
             None => panic!("new_use {:?} not found in conds", new_use),
@@ -145,30 +145,30 @@ impl DefUseTopo for StReg {
 
 #[derive(Debug, Default)]
 pub struct Comb {
-    pub uses: Vec<usize>,
-    pub defs: Vec<usize>,
+    pub uses: Vec<u32>,
+    pub defs: Vec<u32>,
     pub op: OpEnum,
     pub status: Vec<bool>,
-    pub waited_n: usize,
+    pub waited_n: u32,
 }
 
 impl Comb {
-    pub fn new(uses: Vec<usize>, defs: Vec<usize>, op: OpEnum) -> Self {
+    pub fn new(uses: Vec<u32>, defs: Vec<u32>, op: OpEnum) -> Self {
         Self { uses, defs, op, ..Self::default() }
     }
 }
 
 impl DefUseTopo for Comb {
-    fn get_defs(&self) -> Vec<usize> { self.defs.to_owned() }
+    fn get_defs(&self) -> Vec<u32> { self.defs.to_owned() }
 
-    fn get_uses(&self) -> Vec<usize> { self.uses.to_owned() }
+    fn get_uses(&self) -> Vec<u32> { self.uses.to_owned() }
 
     fn initialize(&mut self) -> () {
         self.waited_n = self.uses.len();
         self.status = vec![false; self.waited_n];
     }
 
-    fn update(&mut self, new_use: usize) -> bool {
+    fn update(&mut self, new_use: u32) -> bool {
         let idx = self.uses.iter().position(|&x| x == new_use);
         match idx {
             None => panic!("new_use {:?} not found in conds", new_use),
@@ -187,17 +187,17 @@ impl DefUseTopo for Comb {
 
 #[derive(Debug, Default)]
 pub struct CondCheck {
-    pub conds: Vec<usize>,
-    pub result: usize,
+    pub conds: Vec<u32>,
+    pub result: u32,
     pub onehot: bool,
     pub has_default: bool,
     pub status: Vec<bool>,
-    pub waited_n: usize,
+    pub waited_n: u32,
 }
 
 impl CondCheck {
     pub fn new(
-        conds: Vec<usize>, result: usize, onehot: bool, has_default: bool,
+        conds: Vec<u32>, result: u32, onehot: bool, has_default: bool,
     ) -> Self {
         Self {
             conds,
@@ -210,16 +210,16 @@ impl CondCheck {
 }
 
 impl DefUseTopo for CondCheck {
-    fn get_defs(&self) -> Vec<usize> { vec![self.result] }
+    fn get_defs(&self) -> Vec<u32> { vec![self.result] }
 
-    fn get_uses(&self) -> Vec<usize> { self.conds.to_owned() }
+    fn get_uses(&self) -> Vec<u32> { self.conds.to_owned() }
 
     fn initialize(&mut self) -> () {
         self.waited_n = self.conds.len();
         self.status = vec![false; self.waited_n];
     }
 
-    fn update(&mut self, new_use: usize) -> bool {
+    fn update(&mut self, new_use: u32) -> bool {
         let idx = self.conds.iter().position(|&x| x == new_use);
         match idx {
             None => panic!("new_use {:?} not found in conds", new_use),
@@ -238,24 +238,24 @@ impl DefUseTopo for CondCheck {
 
 #[derive(Debug, Default)]
 pub struct SelectEvent {
-    pub result: usize,
-    pub idx: usize,
-    pub values: Vec<usize>,
+    pub result: u32,
+    pub idx: u32,
+    pub values: Vec<u32>,
     pub has_idx: bool,
     pub status: Vec<bool>,
-    pub waited_n: usize,
+    pub waited_n: u32,
 }
 
 impl SelectEvent {
-    pub fn new(result: usize, idx: usize, values: Vec<usize>) -> Self {
+    pub fn new(result: u32, idx: u32, values: Vec<u32>) -> Self {
         Self { result, idx, values, ..Self::default() }
     }
 }
 
 impl DefUseTopo for SelectEvent {
-    fn get_defs(&self) -> Vec<usize> { vec![self.result] }
+    fn get_defs(&self) -> Vec<u32> { vec![self.result] }
 
-    fn get_uses(&self) -> Vec<usize> { vec![self.idx].into_iter().chain(self.values.to_owned().into_iter()).collect() }
+    fn get_uses(&self) -> Vec<u32> { vec![self.idx].into_iter().chain(self.values.to_owned().into_iter()).collect() }
 
     fn initialize(&mut self) -> () {
         self.has_idx = false;
@@ -263,7 +263,7 @@ impl DefUseTopo for SelectEvent {
         self.status = vec![false; self.waited_n];
     }
 
-    fn update(&mut self, new_use: usize) -> bool {
+    fn update(&mut self, new_use: u32) -> bool {
         if new_use == self.idx {
             assert!(self.has_idx == false);
             self.has_idx = true;
@@ -299,8 +299,8 @@ pub enum Event {
 
 #[derive(Debug, Clone)]
 pub struct SMSetting {
-    pub inputs_from: Vec<usize>,
-    pub outputs_to: Vec<usize>,
+    pub inputs_from: Vec<u32>,
+    pub outputs_to: Vec<u32>,
     pub condition: Condition,
 }
 
@@ -321,17 +321,17 @@ impl Setting {
 }
 #[derive(Debug, Default)]
 pub struct Reducer {
-    hash_map: HashMap<EntityId, usize>,
-    n: usize,
+    hash_map: HashMap<EntityId, u32>,
+    n: u32,
 }
 
 enum Reduced {
-    New(usize),
-    Old(usize),
+    New(u32),
+    Old(u32),
 }
 
 impl Reduced {
-    pub fn idx(self) -> usize {
+    pub fn idx(self) -> u32 {
         match self {
             Reduced::New(idx) => idx,
             Reduced::Old(idx) => idx,
@@ -352,7 +352,7 @@ impl Reducer {
         }
     }
 
-    pub fn reduce_with_target(&mut self, entity: EntityId, target: usize) -> Reduced {
+    pub fn reduce_with_target(&mut self, entity: EntityId, target: u32) -> Reduced {
         match self.hash_map.entry(entity) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 panic!("entity {:?} has already been reduced", entity)
@@ -361,7 +361,7 @@ impl Reducer {
         }
     }
 
-    pub fn new_value(&mut self) -> usize {
+    pub fn new_value(&mut self) -> u32 {
         let new_id = self.n;
         self.n += 1;
         new_id
@@ -381,7 +381,7 @@ impl Channel {
 pub enum Condition {
     Must,
     Never,
-    Value(usize),
+    Value(u32),
     And(Vec<Condition>),
     Or(Vec<Condition>),
     Not(Box<Condition>),
@@ -454,7 +454,7 @@ impl Interpreter {
         }
     }
 
-    fn add_entity(&mut self, cmt: &CmtIR, entity: EntityId, condition: Condition) -> usize {
+    fn add_entity(&mut self, cmt: &CmtIR, entity: EntityId, condition: Condition) -> u32 {
         let reduced = self.reducer.reduce(entity.to_owned());
         match reduced {
             Reduced::New(idx) => {
@@ -473,7 +473,7 @@ impl Interpreter {
 
     fn add_entities(
         &mut self, cmt: &CmtIR, entities: Vec<EntityId>, condition: Condition,
-    ) -> Vec<usize> {
+    ) -> Vec<u32> {
         let reduced = entities
             .iter()
             .map(|entity| {
@@ -484,7 +484,7 @@ impl Interpreter {
     }
 
     fn add_entities_with_target(
-        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, targets: Vec<usize>,
+        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, targets: Vec<u32>,
     ) -> () {
         assert!(entities.len() == targets.len());
         for (entity, target) in entities.iter().zip(targets) {
@@ -498,7 +498,7 @@ impl Interpreter {
 
     fn add_event(&mut self, event: Event) -> () { self.events.push(event); }
 
-    fn add_channels(&mut self, values: Vec<usize>) -> Vec<usize> {
+    fn add_channels(&mut self, values: Vec<u32>) -> Vec<u32> {
         values
             .into_iter()
             .map(|value_idx| {
@@ -509,25 +509,25 @@ impl Interpreter {
             .collect()
     }
 
-    fn add_listen_channel(&mut self, values: Vec<usize>) -> ListenChannel {
+    fn add_listen_channel(&mut self, values: Vec<u32>) -> ListenChannel {
         let channels = self.add_channels(values.to_owned());
         let listen = ListenChannel::new(channels, values);
         listen
     }
 
-    fn add_write_channel(&mut self, values: Vec<usize>) -> WriteChannel {
+    fn add_write_channel(&mut self, values: Vec<u32>) -> WriteChannel {
         let channels = self.add_channels(values.to_owned());
         let write = WriteChannel::new(channels, values);
         write
     }
 
-    fn add_load_reg(&mut self, regs: Vec<usize>) -> LdReg { LdReg::new(regs) }
+    fn add_load_reg(&mut self, regs: Vec<u32>) -> LdReg { LdReg::new(regs) }
 
-    fn add_store_reg(&mut self, values: Vec<usize>, regs: Vec<usize>) -> StReg {
+    fn add_store_reg(&mut self, values: Vec<u32>, regs: Vec<u32>) -> StReg {
         StReg::new(values, regs)
     }
 
-    fn add_comb(&mut self, uses: Vec<usize>, defs: Vec<usize>, op: OpEnum) -> Comb {
+    fn add_comb(&mut self, uses: Vec<u32>, defs: Vec<u32>, op: OpEnum) -> Comb {
         Comb::new(uses, defs, op)
     }
 
@@ -551,7 +551,7 @@ impl Interpreter {
         self.add_event(event);
     }
 
-    fn new_value(&mut self, data_type: DataTypeEnum, condition: Condition) -> usize {
+    fn new_value(&mut self, data_type: DataTypeEnum, condition: Condition) -> u32 {
         let new_value = self.reducer.new_value();
         self.values.push(Value { data_type, value: BigUint::default() });
         self.value_conds.push(condition);
@@ -559,9 +559,9 @@ impl Interpreter {
     }
 
     fn add_cond_check(
-        &mut self, conds: Vec<usize>, onehot: bool, has_default: bool,
+        &mut self, conds: Vec<u32>, onehot: bool, has_default: bool,
         condition: Condition,
-    ) -> usize {
+    ) -> u32 {
         let checked_value = self.new_value(DataTypeEnum::Void, condition);
 
         let event =
@@ -573,7 +573,7 @@ impl Interpreter {
 
     
     // itprt.add_select(lhs, cond_checked_value, values, default);
-    fn add_select(&mut self, lhs: usize, cond_checked_value: usize, mut values: Vec<usize>, default: Option<usize>) -> () {
+    fn add_select(&mut self, lhs: u32, cond_checked_value: u32, mut values: Vec<u32>, default: Option<u32>) -> () {
         match default {
             Some(default) => values.push(default),
             _ => {},

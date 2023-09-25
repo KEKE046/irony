@@ -6,158 +6,155 @@ use super::operation::{Op, OpId};
 use crate::{Id, OpPrinterTrait, ReducerTrait, Region, RegionId};
 
 pub trait Environ: Sized {
-    type DataTypeT;
-    type AttributeT: Clone + PartialEq + std::fmt::Display;
+  type DataTypeT;
+  type AttributeT: Clone + PartialEq + std::fmt::Display;
 
-    type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
-    type ConstraintT: ConstraintTrait<
-        AttributeT = Self::AttributeT,
-        DataTypeT = Self::DataTypeT,
-    >;
+  type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
+  type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
+  type ConstraintT: ConstraintTrait<
+    AttributeT = Self::AttributeT,
+    DataTypeT = Self::DataTypeT,
+  >;
 
-    fn get_defs(&self, id: EntityId) -> Vec<OpId>;
-    fn get_uses(&self, id: EntityId) -> Vec<OpId>;
-    fn get_entity(&self, id: EntityId) -> &Self::EntityT;
-    fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
-    fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
-    fn get_entity_entry(
-        &mut self, entity_id: EntityId,
-    ) -> indexmap::map::Entry<usize, Self::EntityT>;
+  fn get_defs(&self, id: EntityId) -> Vec<OpId>;
+  fn get_uses(&self, id: EntityId) -> Vec<OpId>;
+  fn get_entity(&self, id: EntityId) -> &Self::EntityT;
+  fn get_entities(&self, ids: &[EntityId]) -> Vec<&Self::EntityT>;
+  fn get_entities_with_parent(&self, id: Option<RegionId>) -> Vec<EntityId>;
+  fn get_entity_entry(
+    &mut self, entity_id: EntityId,
+  ) -> indexmap::map::Entry<usize, Self::EntityT>;
 
-    fn update_entity_attr<F>(
-        &mut self, entity_id: EntityId, field_name: &str, f: F,
-    ) -> ()
-    where F: Fn(Self::AttributeT) -> Self::AttributeT {
-        self.get_entity_entry(entity_id)
-            .and_modify(|entity| entity.update_attrs(field_name, f));
-    }
+  fn update_entity_attr<F>(&mut self, entity_id: EntityId, field_name: &str, f: F) -> ()
+  where F: Fn(Self::AttributeT) -> Self::AttributeT {
+    self
+      .get_entity_entry(entity_id)
+      .and_modify(|entity| entity.update_attrs(field_name, f));
+  }
 
-    fn get_op(&self, id: OpId) -> &Self::OpT;
-    fn get_op_entry(&mut self, op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
+  fn get_op(&self, id: OpId) -> &Self::OpT;
+  fn get_op_entry(&mut self, op_id: OpId) -> indexmap::map::Entry<usize, Self::OpT>;
 
-    fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
-    fn get_ops_with_parent(&self, id: Option<RegionId>) -> Vec<OpId>;
-    fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
-    fn get_region(&self, id: RegionId) -> &Region;
-    fn get_region_entry(&mut self, region_id: RegionId) -> indexmap::map::Entry<usize, Region>;
-    fn add_region(&mut self, region: Region) -> RegionId;
-    fn add_op(&mut self, op: Self::OpT) -> OpId;
-    fn set_entity_parent(&mut self, id: EntityId);
-    fn set_op_parent(&mut self, id: OpId);
-    fn get_region_use(&self, region: RegionId) -> Option<OpId>;
-    fn begin_region(&mut self, region: Option<RegionId>);
-    fn end_region(&mut self) -> Option<Option<RegionId>>;
+  fn get_ops(&self, ids: &[OpId]) -> Vec<&Self::OpT>;
+  fn get_ops_with_parent(&self, id: Option<RegionId>) -> Vec<OpId>;
+  fn add_entity(&mut self, entity: Self::EntityT) -> EntityId;
+  fn get_region(&self, id: RegionId) -> &Region;
+  fn get_region_entry(
+    &mut self, region_id: RegionId,
+  ) -> indexmap::map::Entry<usize, Region>;
+  fn add_region(&mut self, region: Region) -> RegionId;
+  fn add_op(&mut self, op: Self::OpT) -> OpId;
+  fn set_entity_parent(&mut self, id: EntityId);
+  fn set_op_parent(&mut self, id: OpId);
+  fn get_region_use(&self, region: RegionId) -> Option<OpId>;
+  fn begin_region(&mut self, region: Option<RegionId>);
+  fn end_region(&mut self) -> Option<Option<RegionId>>;
 
-    fn with_region<F: for<'a> Fn(&mut Self) -> ()>(
-        &mut self, parent: Option<RegionId>, f: F,
-    );
+  fn with_region<F: for<'a> Fn(&mut Self) -> ()>(
+    &mut self, parent: Option<RegionId>, f: F,
+  );
 
-    fn verify_op(&self, op: OpId) -> bool {
-        let op = self.get_op(op);
-        let constraints = op.get_constraints();
-        let attributes = op.get_attrs();
-        let uses = op.get_uses();
-        let defs = op.get_defs();
-        let regions = op.get_regions();
-        let all_true = constraints.into_iter().all(|constraint| {
-            constraint.verify(
-                self,
-                attributes.to_owned(),
-                defs.to_owned(),
-                uses.to_owned(),
-                regions.to_owned(),
-            )
-        });
-        all_true
-    }
+  fn verify_op(&self, op: OpId) -> bool {
+    let op = self.get_op(op);
+    let constraints = op.get_constraints();
+    let attributes = op.get_attrs();
+    let uses = op.get_uses();
+    let defs = op.get_defs();
+    let regions = op.get_regions();
+    let all_true = constraints.into_iter().all(|constraint| {
+      constraint.verify(
+        self,
+        attributes.to_owned(),
+        defs.to_owned(),
+        uses.to_owned(),
+        regions.to_owned(),
+      )
+    });
+    all_true
+  }
 
-    fn print_op(&self, op_id: OpId) -> String {
-        self.verify_op(op_id);
+  fn print_op(&self, op_id: OpId) -> String {
+    self.verify_op(op_id);
 
-        let op = self.get_op(op_id);
-        let printer = op.get_printer();
-        let attributes = op.get_attrs();
-        let uses = op.get_uses();
-        let defs = op.get_defs();
-        let regions = op.get_regions();
+    let op = self.get_op(op_id);
+    let printer = op.get_printer();
+    let attributes = op.get_attrs();
+    let uses = op.get_uses();
+    let defs = op.get_defs();
+    let regions = op.get_regions();
 
-        // println!("op: {:?}", op_id);
-        let mut str = printer.print(self, attributes, uses, defs.to_owned(), regions);
+    // println!("op: {:?}", op_id);
+    let mut str = printer.print(self, attributes, uses, defs.to_owned(), regions);
 
-        for (_def_name, defv) in defs.iter() {
-            for def in defv {
-                if let Some(entity_id) = def {
-                    let entity = self.get_entity(*entity_id);
-                    let debug = entity.get_attr("debug");
-                    let location = entity.get_attr("location");
-                    match (debug, location) {
-                        (Some(_), Some(location)) => {
-                            str = format!(
-                                "{}\n\t// {}: {}",
-                                str,
-                                self.print_entity(*entity_id),
-                                location
-                            );
-                        },
-                        _ => {},
-                    }
-                } else {
-                }
-            }
-        }
-
-        str
-    }
-
-    fn print_entity(&self, entity: EntityId) -> String {
-        // TODO: Add better printing for entities
-        let entity = self.get_entity(entity);
-        let attrs = entity.get_attrs();
-        if let Some(name) = crate::utils::extract_vec(&attrs, "name") {
-            format!("%{}", name)
+    for (_def_name, defv) in defs.iter() {
+      for def in defv {
+        if let Some(entity_id) = def {
+          let entity = self.get_entity(*entity_id);
+          let debug = entity.get_attr("debug");
+          let location = entity.get_attr("location");
+          match (debug, location) {
+            (Some(_), Some(location)) => {
+              str =
+                format!("{}\n\t// {}: {}", str, self.print_entity(*entity_id), location);
+            },
+            _ => {},
+          }
         } else {
-            format!("%{}", entity.id())
         }
+      }
     }
 
-    fn print_region(&self, region: RegionId) -> String {
-        let region = self.get_region(region);
-        let mut ops = vec![];
+    str
+  }
 
-        for op in region.op_children.iter() {
-            ops.push(format!("{}", self.print_op(*op)));
-        }
-        format!("{}", crate::utils::print::tab(ops.join("\n")))
+  fn print_entity(&self, entity: EntityId) -> String {
+    // TODO: Add better printing for entities
+    let entity = self.get_entity(entity);
+    let attrs = entity.get_attrs();
+    if let Some(name) = crate::utils::extract_vec(&attrs, "name") {
+      format!("%{}", name)
+    } else {
+      format!("%{}", entity.id())
     }
+  }
 
-    fn delete_entity(&mut self, entity_id: EntityId);
+  fn print_region(&self, region: RegionId) -> String {
+    let region = self.get_region(region);
+    let mut ops = vec![];
 
-    fn delete_op(&mut self, op_id: OpId) -> ();
-
-    fn delete_region(&mut self, region_id: RegionId) -> () {
-        for op in self.get_region(region_id).get_op_children() {
-            self.delete_op(op);
-        }
-        for entity in self.get_region(region_id).get_entity_children() {
-            self.delete_entity(entity);
-        }
+    for op in region.op_children.iter() {
+      ops.push(format!("{}", self.print_op(*op)));
     }
+    format!("{}", crate::utils::print::tab(ops.join("\n")))
+  }
 
-    fn dump(&self) -> String;
+  fn delete_entity(&mut self, entity_id: EntityId);
 
-    fn run_passes(&mut self) -> Result<(), ()>; // -> ???
+  fn delete_op(&mut self, op_id: OpId) -> ();
 
-    #[track_caller]
-    fn get_hasher(&self) -> RefMut<crate::FxHasher>;
-
-    fn hash_region(&self, region: RegionId, reducer: &mut impl ReducerTrait) {
-        let region = self.get_region(region);
-
-        for op in region.get_op_children() {
-            self.get_op(op).hash_with_reducer(self, reducer);
-        }
+  fn delete_region(&mut self, region_id: RegionId) -> () {
+    for op in self.get_region(region_id).get_op_children() {
+      self.delete_op(op);
     }
+    for entity in self.get_region(region_id).get_entity_children() {
+      self.delete_entity(entity);
+    }
+  }
+
+  fn dump(&self) -> String;
+
+  fn run_passes(&mut self) -> Result<(), ()>; // -> ???
+
+  #[track_caller]
+  fn get_hasher(&self) -> RefMut<crate::FxHasher>;
+
+  fn hash_region(&self, region: RegionId, reducer: &mut impl ReducerTrait) {
+    let region = self.get_region(region);
+
+    for op in region.get_op_children() {
+      self.get_op(op).hash_with_reducer(self, reducer);
+    }
+  }
 }
 
 #[macro_export]
@@ -345,7 +342,7 @@ macro_rules! environ_def {
             fn get_region_entry(&mut self, region_id: irony::RegionId) -> indexmap::map::Entry<usize, irony::Region> {
                 self.region_table.entry(region_id.id())
             }
-            
+
             fn add_region(&mut self, region: irony::Region) -> irony::RegionId {
                 let (id, _) = self.region_table.insert_with_id(region);
                 irony::RegionId(id)

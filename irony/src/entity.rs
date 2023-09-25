@@ -4,55 +4,55 @@ use super::operation::OpId;
 use super::region::RegionId;
 
 pub trait Entity: Id {
-    type DataTypeT;
-    type AttributeT: Clone + PartialEq + std::fmt::Display;
-    fn get_dtype(&self) -> Option<Self::DataTypeT>;
+  type DataTypeT;
+  type AttributeT: Clone + PartialEq + std::fmt::Display;
+  fn get_dtype(&self) -> Option<Self::DataTypeT>;
 
-    fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;
-    fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
-    fn as_id(&self) -> EntityId;
-    fn get_parent(&self) -> Option<RegionId>;
-    fn set_parent(&mut self, parent: Option<RegionId>);
-    fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
-    fn get_attr(&self, attr_name: &str) -> Option<Self::AttributeT> {
-        crate::utils::extract_vec(&self.get_attrs(), attr_name)
-    }
-    fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>);
+  fn get_defs<E: Environ>(&self, env: &E) -> Vec<OpId>;
+  fn get_uses<E: Environ>(&self, env: &E) -> Vec<OpId>;
+  fn as_id(&self) -> EntityId;
+  fn get_parent(&self) -> Option<RegionId>;
+  fn set_parent(&mut self, parent: Option<RegionId>);
+  fn get_attrs(&self) -> Vec<(String, Self::AttributeT)>;
+  fn get_attr(&self, attr_name: &str) -> Option<Self::AttributeT> {
+    crate::utils::extract_vec(&self.get_attrs(), attr_name)
+  }
+  fn set_attrs(&mut self, attrs: Vec<(String, Self::AttributeT)>);
 
-    fn update_attrs<F>(&mut self, name: &str, f: F) -> ()
-    where F: Fn(Self::AttributeT) -> Self::AttributeT {
-        let updated_attrs: Vec<_> = self
-            .get_attrs()
-            .iter()
-            .map(|(attr_name, attr)| {
-                if attr_name == name {
-                    (attr_name.to_owned(), f(attr.to_owned()))
-                } else {
-                    (attr_name.to_owned(), attr.to_owned())
-                }
-            })
-            .collect();
-        self.set_attrs(updated_attrs)
-    }
+  fn update_attrs<F>(&mut self, name: &str, f: F) -> ()
+  where F: Fn(Self::AttributeT) -> Self::AttributeT {
+    let updated_attrs: Vec<_> = self
+      .get_attrs()
+      .iter()
+      .map(|(attr_name, attr)| {
+        if attr_name == name {
+          (attr_name.to_owned(), f(attr.to_owned()))
+        } else {
+          (attr_name.to_owned(), attr.to_owned())
+        }
+      })
+      .collect();
+    self.set_attrs(updated_attrs)
+  }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Hash, Eq)]
 pub struct EntityId(pub usize);
 
 impl From<usize> for EntityId {
-    fn from(value: usize) -> Self { Self(value) }
+  fn from(value: usize) -> Self { Self(value) }
 }
 impl Id for EntityId {
-    fn id(&self) -> usize { self.0 }
+  fn id(&self) -> usize { self.0 }
 
-    fn set_id(&mut self, id: usize) { self.0 = id }
+  fn set_id(&mut self, id: usize) { self.0 = id }
 }
 
 impl EntityId {
-    pub fn get<'env: 't, 't, E>(&'t self, env: &'env E) -> &'t E::EntityT
-    where E: Environ {
-        env.get_entity(self.to_owned())
-    }
+  pub fn get<'env: 't, 't, E>(&'t self, env: &'env E) -> &'t E::EntityT
+  where E: Environ {
+    env.get_entity(self.to_owned())
+  }
 }
 
 #[macro_export]

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use super::*;
 
 #[derive(Debug, Clone, Copy)]
-pub struct ItprtClk(pub usize);
+pub struct ItprtClk(pub u32);
 
 #[derive(Debug, Default)]
 pub struct ItprtSig {
@@ -77,12 +77,12 @@ impl ItprtSig {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ItprtWireId(pub usize);
+pub struct ItprtWireId(pub u32);
 
 #[derive(Debug, Clone)]
 pub struct ItprtWire {
     pub empty: bool,
-    pub idx: usize,
+    pub idx: u32,
     pub data_type: DataTypeEnum,
 }
 
@@ -95,7 +95,7 @@ impl ItprtWire {
         }
     }
 
-    pub fn new(data_type: DataTypeEnum, idx: usize) -> Self {
+    pub fn new(data_type: DataTypeEnum, idx: u32) -> Self {
         Self { empty: false, idx, data_type }
     }
 }
@@ -175,18 +175,18 @@ impl ItprtGuard {
 
 #[derive(Debug)]
 pub struct ItprtOp {
-    idx: usize,
+    idx: u32,
     op: OpEnum, // with reduced def/use id
 }
 
 impl ItprtOp {
-    pub fn new(idx: usize, op: OpEnum) -> Self { Self { idx, op } }
+    pub fn new(idx: u32, op: OpEnum) -> Self { Self { idx, op } }
 }
 
 #[derive(Default)]
 pub struct Dependency {
-    pub max_from_idx: usize,
-    pub dependency: Vec<Vec<usize>>,
+    pub max_from_idx: u32,
+    pub dependency: Vec<Vec<u32>>,
 }
 impl Debug for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -197,7 +197,7 @@ impl Debug for Dependency {
 }
 
 impl Dependency {
-    pub fn add(&mut self, from: usize, to: usize) {
+    pub fn add(&mut self, from: u32, to: u32) {
         if from > self.max_from_idx {
             self.max_from_idx = from;
             self.dependency.resize_with(from + 1, Vec::new);
