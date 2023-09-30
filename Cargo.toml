@@ -3,5 +3,4 @@
 members = [
   "irony",
   "irony_cmt",
-  "cmt_tester"
 ]
