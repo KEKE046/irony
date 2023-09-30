@@ -472,7 +472,7 @@ impl Interpreter {
     }
 
     fn add_entities(
-        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, condition: Condition,
+        &mut self, cmt: &CmtIR, entities: Vec<Option<EntityId>>, condition: Condition,
     ) -> Vec<u32> {
         let reduced = entities
             .iter()
@@ -484,7 +484,7 @@ impl Interpreter {
     }
 
     fn add_entities_with_target(
-        &mut self, cmt: &CmtIR, entities: Vec<EntityId>, targets: Vec<u32>,
+        &mut self, cmt: &CmtIR, entities: Vec<Option<EntityId>>, targets: Vec<u32>,
     ) -> () {
         assert!(entities.len() == targets.len());
         for (entity, target) in entities.iter().zip(targets) {

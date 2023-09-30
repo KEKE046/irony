@@ -135,8 +135,8 @@ pub struct ItprtInst {
 
 impl ItprtInst {
     pub fn new(
-        name: Option<StringAttr>, target_mod: ItprtMod, inputs: Vec<EntityId>,
-        outputs: Vec<EntityId>,
+        name: Option<StringAttr>, target_mod: ItprtMod, inputs: Vec<Option<EntityId>>,
+        outputs: Vec<Option<EntityId>>,
     ) -> Self {
         match name {
             Some(StringAttr(name)) => {
@@ -305,7 +305,7 @@ impl ItprtMod {
     }
 
     pub fn add_wires(
-        &mut self, entity_id: Vec<EntityId>, data_type: Vec<DataTypeEnum>,
+        &mut self, entity_id: Vec<Option<EntityId>>, data_type: Vec<DataTypeEnum>,
         guard: ItprtGuard,
     ) {
         for (entity_id, data_type) in entity_id.into_iter().zip(data_type.into_iter()) {

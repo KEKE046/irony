@@ -180,62 +180,33 @@ irony::op_def! {
         // ------ BEGIN: define the operations in `event` dialect -------
 
 
-        EventFromSignal: {
-            defs: [lhs],
-            uses: [rhs],
-            print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
-                    let lhs = env.print_entity(defs[0].1[0].unwrap());
-                    let rhs = env.print_entity(uses[0].1[0].unwrap());
-                    format!("{} = event.from {}", lhs, rhs)
-                }
-            )
+        EventSignal: {
+          defs: [],
+          uses: [event, signal],
+          print: (
+              |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                  let event = env.print_entity(uses[0].1[0].unwrap());
+                  let signal = env.print_entity(uses[1].1[0].unwrap());
+                  format!("event.signal {} === {}", event, signal)
+              }
+          )
         },
 
-
-        EventEval: {
-            defs: [lhs],
-            uses: [rhs],
+        EventPort: {
+            defs: [],
+            uses: [event; wires],
             print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _|  {
-                    let lhs = env.print_entity(defs[0].1[0].unwrap());
-                    let rhs = env.print_entity(uses[0].1[0].unwrap());
-                    format!("{} = event.eval {}", lhs, rhs)
-                }
-            )
-        },
-
-
-        EventBlockDef: {
-            defs: [event],
-            uses: [],
-            regions: [body],
-            print: (
-                |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>,  regions: Vec<(String, Vec<RegionId>)>| {
-                    let event = env.print_entity(defs[0].1[0].unwrap());
-
-                    let body = env.print_region(regions[0].1[0]);
-
-                    format!("{} = event.block {{\n{}\n}}",  event, body)
-                }
-            )
-        },
-
-        EventGuardDef: {
-            defs: [event],
-            uses: [; wires],
-            print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
-                    let event = env.print_entity(defs[0].1[0].unwrap());
-                    let wires = uses[0].1.iter().map(|id| {
+                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
+                    let event = env.print_entity(uses[0].1[0].unwrap());
+                    let wires = uses[1].1.iter().map(|id| {
                         format!("{}", env.print_entity((*id).unwrap()))
                     }).collect::<Vec<_>>().join(", ");
-                    format!("{} = event.guard {}", event, wires)
+                    format!("event.port {} === [{}]", event, wires)
                 }
             )
         },
 
-        EventRawDef: {
+        EventDef: {
             defs: [event],
             uses: [],
             print: (
@@ -247,29 +218,23 @@ irony::op_def! {
         },
 
 
-        EventCover: {
-            defs: [],
-            uses: [father; sons],
-            print: (
-                |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, _| {
-                    let father = env.print_entity(uses[0].1[0].unwrap());
-                    let sons = uses[1].1.iter().map(|id| {
-                        format!("{}", env.print_entity((*id).unwrap()))
-                    }).collect::<Vec<_>>().join(", ");
-
-                    if sons.is_empty() {
-                        format!("")
-                    } else {
-                        format!("event.cover {} on {}",  father, sons)
-                    }
-                }
-            )
-        },
-
-
         // ------ END: define the operations in `event` dialect -------
 
-        Select: {
+
+        TmpWhen: {
+          defs: [],
+          uses: [cond],
+          regions: [body],
+          print: (
+              |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, regions: Vec<(String, Vec<RegionId>)>| {
+                  let cond = env.print_entity(uses[0].1[0].unwrap());
+                  let body = env.print_region(regions[0].1[0]);
+                  format!("ILLEGAL.when {} {{\n{}\n}}", cond, body)
+              }
+          )
+        },
+        
+        TmpSelect: {
             defs: [lhs],
             uses: [default; conds, values],
             attrs: [ onehot: BoolAttr(BoolAttr)(*)],
@@ -289,7 +254,12 @@ irony::op_def! {
                     };
 
                     let candidates = uses[2].1.iter().zip(uses[1].1.iter()).map(|(value, cond)| {
-                        format!("\t{} : {}", env.print_entity(cond.unwrap()), env.print_entity(value.unwrap()))
+                        format!("\t{} : {}", 
+                          match cond {
+                            Some(cond) => env.print_entity(*cond),
+                            None => format!("[TBD]"),
+                          }, 
+                          env.print_entity(value.unwrap()))
                     }).collect::<Vec<_>>().join(", \n");
 
 
@@ -303,7 +273,7 @@ irony::op_def! {
             )
         },
 
-        CombUnary: {
+        TmpUnary: {
             defs: [lhs],
             uses: [op],
             attrs: [predicate: CombUnaryPredicate(CombUnaryPredicate)(*)],

@@ -34,8 +34,8 @@ mod hw_test {
         .into(),
       );
       // let c = circt.add_entity(IRWire::new("c", DataTypeEnum::UInt(8.into())).into());
-      cmt.add_op(HwInput::new(vec![a]).into());
-      cmt.add_op(HwOutput::new(vec![a]).into());
+      cmt.add_op(HwInput::new(vec![Some(a)]).into());
+      cmt.add_op(HwOutput::new(vec![Some(a)]).into());
     });
 
     assert!(cmt.verify_op(module_pass_def));
@@ -137,12 +137,12 @@ mod hw_test {
         .into(),
       );
 
-      cmt.add_op(HwInput::new(vec![a, clk]).into());
+      cmt.add_op(HwInput::new(vec![Some(a), Some(clk)]).into());
 
       let instance = cmt.add_op(
         HwInstance::new(
-          vec![b],
-          vec![a],
+          vec![Some(b)],
+          vec![Some(a)],
           Some(module_pass_def.into()),
           Some(StringAttr("pass_inst".into())),
         )
@@ -153,10 +153,10 @@ mod hw_test {
 
       cmt.add_op(HwConstant::new(Some(c), Some([1, 0, 0, 0].into())).into());
       cmt.add_op(
-        CombVariadic::new(Some(d), vec![b, c].into(), Some(CombVariadicPredicate::Add))
+        CombVariadic::new(Some(d), vec![Some(b), Some(c)].into(), Some(CombVariadicPredicate::Add))
           .into(),
       );
-      cmt.add_op(CombUnary::new(Some(e), Some(d), Some(CombUnaryPredicate::Not)).into());
+      cmt.add_op(TmpUnary::new(Some(e), Some(d), Some(CombUnaryPredicate::Not)).into());
 
       cmt.add_op(
         CombICmp::new(Some(cond), Some(e), Some(d), Some(CombICmpPredicate::EQ)).into(),
@@ -166,7 +166,7 @@ mod hw_test {
 
       cmt.add_op(SeqCompReg::new(Some(h_reg), Some(h), Some(clk), None, None).into());
 
-      cmt.add_op(HwOutput::new(vec![h_reg]).into());
+      cmt.add_op(HwOutput::new(vec![Some(h_reg)]).into());
     });
     (cmt, module_def)
   }
@@ -247,8 +247,8 @@ mod hw_test {
         .into(),
       );
       // let c = circt.add_entity(IRWire::new("c", DataTypeEnum::UInt(8.into())).into());
-      circt.add_op(HwInput::new(vec![a, b]).into());
-      circt.add_op(HwOutput::new(vec![a]).into());
+      circt.add_op(HwInput::new(vec![Some(a), Some(b)]).into());
+      circt.add_op(HwOutput::new(vec![Some(a)]).into());
     });
 
     assert!(circt.verify_op(module_def))
@@ -283,8 +283,8 @@ mod hw_test {
         .into(),
       );
       // let c = circt.add_entity(IRWire::new("c", DataTypeEnum::UInt(8.into())).into());
-      circt.add_op(HwInput::new(vec![a]).into());
-      circt.add_op(HwOutput::new(vec![a]).into());
+      circt.add_op(HwInput::new(vec![Some(a)]).into());
+      circt.add_op(HwOutput::new(vec![Some(a)]).into());
     });
 
     assert!(circt.verify_op(module_pass_def));
@@ -323,13 +323,13 @@ mod hw_test {
         .into(),
       );
 
-      circt.add_op(HwInput::new(vec![a]).into());
-      circt.add_op(HwOutput::new(vec![b]).into());
+      circt.add_op(HwInput::new(vec![Some(a)]).into());
+      circt.add_op(HwOutput::new(vec![Some(b)]).into());
 
       let instance = circt.add_op(
         HwInstance::new(
-          vec![b],
-          vec![a],
+          vec![Some(b)],
+          vec![Some(a)],
           Some(OpIdAttr(module_pass_def)),
           Some(StringAttr("pass_inst".into())),
         )

@@ -60,7 +60,7 @@ impl Id for OpId {
 macro_rules! reduce_then_hash {
   ($reducer:ident, $target:expr, $hasher:expr) => {{
     let __target = $target;
-    let __reduced = $reducer.reduce_entity(__target);
+    let __reduced = __target.map(|x| $reducer.reduce_entity(x));
     __reduced.hash($hasher);
     // println!("\treduced {:?} to {:?}, then hash it", __target, __reduced);
   }};
@@ -130,9 +130,9 @@ macro_rules! op_def_one {
             id: usize,
             op_name: String,
             $($def: Option<irony::EntityId>,)*
-            $($($variadic_def: Vec<irony::EntityId>,)*)?
+            $($($variadic_def: Vec<Option<irony::EntityId>>,)*)?
             $($use:Option<irony::EntityId>,)*
-            $($($variadic_use: Vec<irony::EntityId>,)*)?
+            $($($variadic_use: Vec<Option<irony::EntityId>>,)*)?
             $($($attr: Option<$attr_inner_ty>,)*)?
             $(
                 $($region: Option<irony::RegionId>,)*
@@ -165,14 +165,14 @@ macro_rules! op_def_one {
             fn get_defs(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 vec![
                     $((format!("{}", stringify!($def)), vec![self.$def.to_owned()])),*
-                    $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned().into_iter().map(|x| Some(x)).collect()))*)?
+                    $($((format!("{}", stringify!($variadic_def)), self.$variadic_def.to_owned()))*)?
                 ]
             }
 
             fn get_uses(&self) -> Vec<(String, Vec<Option<irony::EntityId>>)> {
                 vec![
                     $((format!("{}", stringify!($use)), vec![self.$use.to_owned()]),)*
-                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned().into_iter().map(|x| Some(x)).collect())),*)?
+                    $($((format!("{}", stringify!($variadic_use)), self.$variadic_use.to_owned())),*)?
                 ]
 
             }
@@ -265,7 +265,7 @@ macro_rules! op_def_one {
                 }
                 $(
                     if self.$def.is_some() {
-                        reduce_then_hash!(reducer, self.$def.to_owned().unwrap(), env.get_hasher().deref_mut());
+                        reduce_then_hash!(reducer, self.$def.to_owned(), env.get_hasher().deref_mut());
 
                     }
                 )*
@@ -279,7 +279,7 @@ macro_rules! op_def_one {
 
                 $(
                     if self.$use.is_some() {
-                        reduce_then_hash!(reducer, self.$use.to_owned().unwrap(), env.get_hasher().deref_mut());
+                        reduce_then_hash!(reducer, self.$use.to_owned(), env.get_hasher().deref_mut());
                     }
                 )*
                 $(
@@ -325,7 +325,7 @@ macro_rules! op_def_one {
                     )*
                     $(
                         $(
-                            $variadic_def: self.$variadic_def.into_iter().map(|x| EntityId(reducer.reduce_entity(x))).collect(),
+                            $variadic_def: self.$variadic_def.into_iter().map(|x| x.map(|x| EntityId(reducer.reduce_entity(x)))).collect(),
                         )*
                     )?
                     $(
@@ -333,7 +333,7 @@ macro_rules! op_def_one {
                     )*
                     $(
                         $(
-                            $variadic_use: self.$variadic_use.into_iter().map(|x| EntityId(reducer.reduce_entity(x))).collect(),
+                            $variadic_use: self.$variadic_use.into_iter().map(|x| x.map(|x| EntityId(reducer.reduce_entity(x)))).collect(),
                         )*
                     )?
                     .. backup
@@ -345,9 +345,9 @@ macro_rules! op_def_one {
         impl $name {
             pub fn new(
                 $($def: Option<irony::EntityId>,)*
-                $($($variadic_def: Vec<irony::EntityId>,)*)?
+                $($($variadic_def: Vec<Option<irony::EntityId>>,)*)?
                 $($use: Option<irony::EntityId>,)*
-                $($($variadic_use: Vec<irony::EntityId>,)*)?
+                $($($variadic_use: Vec<Option<irony::EntityId>>,)*)?
                 $($($attr: Option<$attr_inner_ty>,)*)?
                 $($($region: Option<irony::RegionId>,)*)?
                 $($($($variadic_region: Vec<irony::RegionId>,)*)?)?
