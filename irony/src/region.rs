@@ -49,6 +49,14 @@ impl Region {
     }
   }
 
+  pub fn delete_op_child(&mut self, op: OpId) {
+    if let Some(index) = self.op_children.iter().position(|&op_exist| op_exist.id() == op.id()) {
+      self.op_children.remove(index);
+    } else {
+      panic!("{} is not in the op_children of {}\n", op.id(), self.id())
+    }
+  }
+
   pub fn add_entity_child(&mut self, entity: EntityId) {
     if let Some(_) =
       self.entity_children.iter().find(|&entity_exist| entity_exist.id() == entity.id())
@@ -56,6 +64,16 @@ impl Region {
       panic!("{} has already been in the entity_children of {}", entity.id(), self.id())
     } else {
       self.entity_children.push(entity)
+    }
+  }
+
+  pub fn delete_entity_child(&mut self, entity: EntityId) {
+    if let Some(index) =
+      self.entity_children.iter().position(|&entity_exist| entity_exist.id() == entity.id())
+    {
+      self.entity_children.remove(index);
+    } else {
+      panic!("{} is not in the entity_children of {}", entity.id(), self.id())
     }
   }
 

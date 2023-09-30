@@ -3,11 +3,11 @@ use std::cell::RefMut;
 use super::constraint::ConstraintTrait;
 use super::entity::{Entity, EntityId};
 use super::operation::{Op, OpId};
-use crate::{Id, OpPrinterTrait, ReducerTrait, Region, RegionId};
+use crate::{Id, OpPrinterTrait, ReducerTrait, Region, RegionId, AsBool};
 
 pub trait Environ: Sized {
   type DataTypeT;
-  type AttributeT: Clone + PartialEq + std::fmt::Display;
+  type AttributeT: Clone + PartialEq + std::fmt::Display + AsBool;
 
   type OpT: Op<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
   type EntityT: Entity<DataTypeT = Self::DataTypeT, AttributeT = Self::AttributeT>;
@@ -93,9 +93,15 @@ pub trait Environ: Sized {
           let debug = entity.get_attr("debug");
           let location = entity.get_attr("location");
           match (debug, location) {
-            (Some(_), Some(location)) => {
-              str =
-                format!("{}\n\t// {}: {}", str, self.print_entity(*entity_id), location);
+            (Some(debug), Some(location)) => {
+              if debug.as_bool() {
+                str = format!(
+                  "{}\n\t// {}: {}",
+                  str,
+                  self.print_entity(*entity_id),
+                  location
+                );
+              }
             },
             _ => {},
           }
@@ -131,10 +137,11 @@ pub trait Environ: Sized {
   fn delete_entity(&mut self, entity_id: EntityId);
 
   fn delete_op(&mut self, op_id: OpId) -> ();
+  fn delete_op_and_all(&mut self, op_id: OpId) -> ();
 
   fn delete_region(&mut self, region_id: RegionId) -> () {
     for op in self.get_region(region_id).get_op_children() {
-      self.delete_op(op);
+      self.delete_op_and_all(op);
     }
     for entity in self.get_region(region_id).get_entity_children() {
       self.delete_entity(entity);
@@ -425,6 +432,19 @@ macro_rules! environ_def {
             }
 
             fn delete_op(&mut self, op_id: OpId) -> () {
+              let parent = self.get_op(op_id).get_parent().to_owned();
+              match parent {
+                Some(parent) => {
+                  self.region_table.entry(parent.id()).and_modify(|region|
+                    region.delete_op_child(op_id)
+                  );
+                },
+                None => {}
+              }
+              self.op_table.remove(&op_id.id());
+            }
+
+            fn delete_op_and_all(&mut self, op_id: OpId) -> () {
                 for (_, def_field) in self.get_op(op_id).get_defs() {
                     for def in def_field {
                         if let Some(entity_id) = def {
@@ -441,7 +461,17 @@ macro_rules! environ_def {
                     }
                 }
 
+                let parent = self.get_op(op_id).get_parent().to_owned();
+                match parent {
+                  Some(parent) => {
+                    self.region_table.entry(parent.id()).and_modify(|region|
+                      region.delete_op_child(op_id)
+                    );
+                  },
+                  None => {}
+                }
                 self.op_table.remove(&op_id.id());
+
             }
         }
     };

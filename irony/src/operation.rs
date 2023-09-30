@@ -43,6 +43,8 @@ pub trait Op: Id + Debug {
   fn hash_with_reducer(&self, env: &impl Environ, reducer: &mut impl ReducerTrait);
 
   fn reduce_def_use(self, reducer: &mut impl ReducerTrait) -> Self;
+
+  fn replace_use(&mut self, old: EntityId, new: EntityId) -> ();
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Hash, Eq, Default)]
@@ -339,6 +341,21 @@ macro_rules! op_def_one {
                     .. backup
                 }
             }
+            fn replace_use(&mut self, old: EntityId, new: EntityId) -> () {
+                $(
+                    if self.$use.is_some() {
+                        if self.$use.unwrap() == old {
+                            self.$use = Some(new);
+                        }
+                    }
+                )*
+                $(
+                    $(
+                      let new_variadic_use = self.$variadic_use.to_owned().into_iter().map(|x| if x == Some(old) { Some(new) } else { x }).collect();
+                      self.$variadic_use = new_variadic_use;
+                    )*
+                )?
+            }
         }
 
 
@@ -545,6 +562,13 @@ macro_rules! op_enum {
                 match self {
                     $name::None => panic!(),
                     $($name::$variant(inner) => $name::$variant(inner.reduce_def_use(reducer))),*
+                }
+            }
+
+            fn replace_use(&mut self, old: EntityId, new: EntityId) -> () {
+                match self {
+                    $name::None => panic!(),
+                    $($name::$variant(inner) => inner.replace_use(old, new)),*
                 }
             }
         }

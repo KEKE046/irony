@@ -1,5 +1,8 @@
 use crate::{EntityId, OpId};
 
+pub trait AsBool {
+  fn as_bool(&self) -> bool;
+}
 pub trait ReducerTrait {
   fn reduce_entity(&mut self, id: EntityId) -> usize;
   fn reduce_op(&mut self, id: OpId) -> usize;

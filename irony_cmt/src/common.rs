@@ -1,6 +1,6 @@
 use std::panic::Location;
 
-use irony::{utils, OpId};
+use irony::{utils, OpId, AsBool};
 
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ClkType;
@@ -427,6 +427,15 @@ impl DataTypeEnum {
       },
       DataTypeEnum::Clk(_) => 1,
       _ => unimplemented!(),
+    }
+  }
+}
+
+impl AsBool for AttributeEnum {
+  fn as_bool(&self) -> bool {
+    match self {
+      AttributeEnum::BoolAttr(BoolAttr(b)) => *b,
+      _ => panic!("not a bool attr"),
     }
   }
 }

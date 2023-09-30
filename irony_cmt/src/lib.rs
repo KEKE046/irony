@@ -902,7 +902,7 @@ impl CmtIR {
       };
 
     if deletion {
-      self.delete_op(op);
+      self.delete_op_and_all(op);
     }
 
     final_op_id

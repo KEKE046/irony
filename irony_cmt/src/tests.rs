@@ -173,7 +173,7 @@ mod hw_test {
 
   #[test]
   pub fn print_test() -> Result<(), ()> {
-    let (mut cmt, ..) = create();
+    let (cmt, ..) = create();
 
     let no_parent = cmt
       .op_table
