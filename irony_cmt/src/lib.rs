@@ -289,6 +289,22 @@ irony::op_def! {
 
         // ------ END: define the operations in `temporary` dialect -------
 
+        // ------ BEGIN: define the operations in `sv` dialect -------
+
+        SvConstantX: {
+          defs: [lhs],
+          uses: [],
+          print:(
+              |env: &E, _, _, defs: Vec<(String, Vec<Option<EntityId>>)>, _| {
+                  let lhs = env.print_entity(defs[0].1[0].unwrap());
+                  let typ = env.get_entity(defs[0].1[0].unwrap()).get_dtype().unwrap();
+                  format!("{} = sv.constantX : {}", lhs, typ)
+              }
+          )
+        },
+
+        
+        // ______ END: define the operations in `sv` dialect ______
 
         // ------ BEGIN: define the operations in `hw` dialect -------
         Assign: {

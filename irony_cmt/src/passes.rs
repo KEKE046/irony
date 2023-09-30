@@ -1,94 +1,20 @@
 use core::panic;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use irony::{Entity, Environ, Op, OpId, PassManagerTrait, PassTrait};
 
 use crate::{
-  AttributeEnum, EntityEnum, EventSignal, OpEnum, StringAttr, TmpSelect, TmpWhen,
+  AttributeEnum, EntityEnum, EventSignal, OpEnum, StringAttr, TmpSelect, TmpWhen, IRWire, SvConstantX, CombMux2, Assign,
 };
 
 #[derive(Debug, Clone)]
-pub struct RenamePass;
+pub struct ReorderPass;
 
-impl PassTrait<(), ()> for RenamePass {
-  type EntityT = EntityEnum;
-  type OpT = OpEnum;
-
-  fn check_op<E>(&self, env: &E, op: OpId) -> bool
-  where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    match env.get_op(op) {
-      OpEnum::HwModule(_) => true,
-      _ => false,
-    }
-  }
-
-  fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
-  where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    let region = env.get_op(op).get_regions()[0].1[0];
-
-    let mut name_set = HashSet::new();
-
-    let included = env.get_region(region).op_children.to_owned();
-    for op_id in included {
-      match env.get_op(op_id) {
-        OpEnum::HwInput(_) => {},
-        x => {
-          let defs = x
-            .get_defs()
-            .iter()
-            .flat_map(|(_, v)| v.iter().filter_map(|x| x.map(|x| x.to_owned())))
-            .collect::<Vec<_>>();
-          for def in defs {
-            let name = env.get_entity(def).get_attr("name").unwrap();
-            let name = match name {
-              AttributeEnum::StringAttr(StringAttr(name)) => name,
-              _ => {
-                panic!()
-              },
-            };
-
-            let mut splits = name.split('_').collect::<Vec<_>>();
-            loop {
-              let last = splits.pop();
-              match last {
-                Some(last) => {
-                  if last.to_string().parse::<u32>().is_ok() {
-                    let shorter = splits.join("_");
-                    if name_set.contains(&shorter) {
-                      splits.push(last);
-                      break;
-                    }
-                  } else {
-                    splits.push(last);
-                    break;
-                  }
-                },
-                _ => {
-                  break;
-                },
-              }
-            }
-
-            let name = splits.join("_");
-            name_set.insert(name.to_owned());
-
-            env.get_entity_entry(def).and_modify(|entity| {
-              entity.set_attrs(vec![(
-                "name".to_owned(),
-                AttributeEnum::StringAttr(StringAttr(name)),
-              )]);
-            });
-          }
-        },
-      }
-    }
-
-    Ok(())
+impl Into<PassEnum> for ReorderPass {
+  fn into(self) -> PassEnum {
+    PassEnum::ReorderPass(self)
   }
 }
-
-#[derive(Debug, Clone)]
-pub struct ReorderPass;
 
 impl PassTrait<(), ()> for ReorderPass {
   type EntityT = EntityEnum;
@@ -139,6 +65,12 @@ impl PassTrait<(), ()> for ReorderPass {
 #[derive(Debug, Clone)]
 pub struct RemoveEventPass;
 
+impl Into<PassEnum> for RemoveEventPass {
+  fn into(self) -> PassEnum {
+    PassEnum::RemoveEventPass(self)
+  }
+}
+
 impl PassTrait<(), ()> for RemoveEventPass {
   type EntityT = EntityEnum;
   type OpT = OpEnum;
@@ -153,7 +85,8 @@ impl PassTrait<(), ()> for RemoveEventPass {
 
   fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    let mut event_signal_mapping: HashMap<irony::EntityId, irony::EntityId> = HashMap::new();
+    let mut event_signal_mapping: HashMap<irony::EntityId, irony::EntityId> =
+      HashMap::new();
     let mut wire_guarded_table = HashMap::new();
     let region = env.get_op(op).get_regions()[0].1[0];
     let included = env.get_region(region).op_children.to_owned();
@@ -222,15 +155,13 @@ impl PassTrait<(), ()> for RemoveEventPass {
               new_conds.push(old_cond.to_owned());
             }
           }
-          env.get_op_entry(op_id.to_owned()).and_modify(|op| {
-            match op {
-              OpEnum::TmpSelect(TmpSelect { conds, .. }) => {
-                *conds = new_conds;
-              },
-              _ => {
-                panic!()
-              },
-            }
+          env.get_op_entry(op_id.to_owned()).and_modify(|op| match op {
+            OpEnum::TmpSelect(TmpSelect { conds, .. }) => {
+              *conds = new_conds;
+            },
+            _ => {
+              panic!()
+            },
           });
         },
         _ => {},
@@ -246,10 +177,133 @@ impl PassTrait<(), ()> for RemoveEventPass {
 }
 
 #[derive(Debug, Clone)]
+pub struct RemoveSelectPass;
+
+impl Into<PassEnum> for RemoveSelectPass {
+  fn into(self) -> PassEnum {
+    PassEnum::RemoveSelectPass(self)
+  }
+}
+
+impl PassTrait<(), ()> for RemoveSelectPass {
+  type EntityT = EntityEnum;
+  type OpT = OpEnum;
+
+  fn check_op<E>(&self, env: &E, op: OpId) -> bool
+  where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
+    match env.get_op(op) {
+      OpEnum::HwModule(_) => true,
+      _ => false,
+    }
+  }
+
+  fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
+  where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
+    let region = env.get_op(op).get_regions()[0].1[0];
+    let included = env.get_region(region).op_children.to_owned();
+    let mut included_entity = env.get_region(region).entity_children.to_owned();
+    let mut new_included_op = Vec::new();
+
+    for op_id in included.iter() {
+      let op = env.get_op(op_id.to_owned()).to_owned();
+      match op {
+        OpEnum::TmpSelect(TmpSelect { lhs, conds, values, default, onehot,.. }) => {
+          let onehot = onehot.unwrap_or(false.into()).0;
+          if onehot {
+            println!("[TODO] support onehot select");
+          }
+          let onehot = false;
+          if onehot {
+            
+          //TODO: support onehot select
+
+          } else {
+            let default = match default {
+              Some(default) => default,
+              None => {
+                let data_type = env.get_entity(values.first().expect("must have at least one value").expect("must be Some").to_owned()).get_dtype();
+                let AttributeEnum::StringAttr(StringAttr(name)) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("name").unwrap() else {panic!()};
+                let AttributeEnum::LocationAttr(location) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("location").unwrap() else {panic!()};
+                let AttributeEnum::BoolAttr(debug) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("debug").unwrap() else {panic!()};
+
+                // unimplemented!()
+                let default = env.add_entity({
+                  let mut wire = IRWire::new(data_type, Some((name + "_default").into()), Some(debug), Some(location));
+                  wire.parent = Some(region.to_owned());
+                  wire
+                }.into());
+                
+                included_entity.push(default.to_owned());
+
+                let constant = env.add_op( {
+                  let mut op = SvConstantX::new(Some(default));
+                  op.parent = Some(region.to_owned());
+                  op
+                }.into());
+                
+                new_included_op.push(constant);
+                default
+              }
+            };
+
+            let mut last = default;
+            for (cond, value) in conds.iter().zip(values.iter()).rev() {
+              let cond = cond.to_owned().expect("must be Some");
+              let value = value.to_owned().expect("must be Some");
+              let data_type = env.get_entity(value).get_dtype();
+              let AttributeEnum::StringAttr(StringAttr(name)) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("name").unwrap() else {panic!()};
+              let AttributeEnum::LocationAttr(location) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("location").unwrap() else {panic!()};
+              let AttributeEnum::BoolAttr(debug) = env.get_entity(lhs.expect("must be Some").to_owned()).get_attr("debug").unwrap() else {panic!()};
+
+              let mux_wire = env.add_entity({
+                let mut wire = IRWire::new(data_type, Some((name + "_mux").into()), Some(debug), Some(location));
+                wire.parent = Some(region.to_owned());
+                wire
+              }.into());
+              
+              included_entity.push(mux_wire.to_owned());
+
+              let mux_op = env.add_op({
+                let mut mux = CombMux2::new(Some(mux_wire.to_owned()), Some(cond), Some(value), Some(last));
+                mux.parent = Some(region.to_owned());
+                mux
+              }.into());
+
+              new_included_op.push(mux_op);
+
+              last = mux_wire;
+            }
+
+            let assign = env.add_op({
+              let mut assign = Assign::new(Some(lhs.expect("must be Some")), Some(last));
+              assign.parent = Some(region.to_owned());
+              assign
+            }.into());
+
+            new_included_op.push(assign);
+          }
+       
+        },
+         _ => {
+          new_included_op.push(op_id.to_owned());
+        },
+      }
+    }
+
+    env.get_region_entry(region).and_modify(|region| {
+      region.op_children = new_included_op;
+      region.entity_children = included_entity;
+    });
+
+    Ok(())
+  }
+}
+
+#[derive(Debug, Clone)]
 pub enum PassEnum {
-  RenamePass(RenamePass),
   ReorderPass(ReorderPass),
   RemoveEventPass(RemoveEventPass),
+  RemoveSelectPass(RemoveSelectPass),
 }
 
 impl PassTrait<(), ()> for PassEnum {
@@ -259,18 +313,18 @@ impl PassTrait<(), ()> for PassEnum {
   fn check_op<E>(&self, env: &E, op_id: irony::OpId) -> bool
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
     match self {
-      PassEnum::RenamePass(pass) => pass.check_op(env, op_id),
       PassEnum::ReorderPass(pass) => pass.check_op(env, op_id),
       PassEnum::RemoveEventPass(pass) => pass.check_op(env, op_id),
+      PassEnum::RemoveSelectPass(pass) => pass.check_op(env, op_id),
     }
   }
 
   fn run_raw<E>(&self, env: &mut E, op_id: irony::OpId) -> Result<(), ()>
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
     match self {
-      PassEnum::RenamePass(pass) => pass.run_raw(env, op_id),
-      PassEnum::ReorderPass(pass) => pass.run_raw(env, op_id), 
+      PassEnum::ReorderPass(pass) => pass.run_raw(env, op_id),
       PassEnum::RemoveEventPass(pass) => pass.run_raw(env, op_id),
+      PassEnum::RemoveSelectPass(pass) => pass.run_raw(env, op_id),
     }
   }
 }

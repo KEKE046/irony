@@ -186,17 +186,6 @@ mod hw_test {
       println!("{}", cmt.print_op(*op));
     }
 
-    println!();
-    println!("run pass: RenamePass\n");
-
-    println!("no parent: {:?}", no_parent);
-
-    cmt
-      .pass_manager
-      .add_passes(vec![PassEnum::RenamePass(RenamePass)], vec![no_parent.to_owned()]);
-
-    cmt.run_passes()?;
-
     for op in no_parent.iter() {
       println!("{}", cmt.print_op(*op));
     }
