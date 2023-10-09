@@ -24,7 +24,8 @@ irony::constraint_def! {
             };
 
             if is_extern {
-              region.is_none()
+              // region.is_none()
+              true
             } else {
               let region = region.unwrap();
               irony::utils::extract_vec(&attrs, "arg_names") == super::cmt_utils::extract_input_names(env, region) &&

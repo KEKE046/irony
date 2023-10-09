@@ -351,7 +351,7 @@ irony::op_def! {
                     }).collect::<Vec<_>>().join(", ");
 
                     if is_extern {
-                      format!("hw.module.extern @{}({}) -> ({}) {{}}", name, args, outputs)
+                      format!("hw.module.extern @{}({}) -> ({})", name, args, outputs)
                     } else {
                       format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1[0].expect("must have region")))
                     }
