@@ -736,11 +736,11 @@ irony::op_def! {
                     let output_name = env.print_entity(defs[0].1[0].unwrap());
                     let input_name = match uses.iter().find(|(name, _)| name == "input").and_then(|(_, ids)| Some(env.print_entity(ids[0].unwrap()))) {
                         Some(name) => name,
-                        None => format!(""),
+                        None => panic!("must provide op for seq.compreg"),
                     };
                     let clk = match uses.iter().find(|(name, _)| name == "clk").and_then(|(_, ids)| Some(env.print_entity(ids[0].unwrap()))) {
-                        Some(name) => name,
-                        None => format!(""),
+                        Some(name) => format!(",{}", name),
+                        None => panic!("must provide clk for seq.compreg"),
                     };
                     let reset = match uses.iter().find(|(name, _)| name == "reset").and_then(|(_, ids)| {
                         if let Some(id) = ids[0] {
@@ -748,7 +748,7 @@ irony::op_def! {
                         } else {
                             None
                         }}) {
-                        Some(name) => name,
+                        Some(name) => format!(",{}", name),
                         None => format!(""),
                     };
                     let reset_val = match uses.iter().find(|(name, _)| name == "reset_val").and_then(|(_, ids)| {
@@ -757,7 +757,7 @@ irony::op_def! {
                         } else {
                             None
                         }}) {
-                        Some(name) => name,
+                        Some(name) => format!(",{}", name),
                         None => format!(""),
                     };
 
