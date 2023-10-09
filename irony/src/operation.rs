@@ -32,7 +32,7 @@ pub trait Op: Id + Debug {
   fn get_parent(&self) -> Option<RegionId>;
   fn set_parent(&mut self, parent: Option<RegionId>);
 
-  fn get_regions(&self) -> Vec<(String, Vec<RegionId>)>;
+  fn get_regions(&self) -> Vec<(String, Vec<Option<RegionId>>)>;
 
   fn use_region(&self, region: RegionId) -> bool;
 
@@ -139,7 +139,7 @@ macro_rules! op_def_one {
             $(
                 $($region: Option<irony::RegionId>,)*
                 $(
-                    $($variadic_region: Vec<irony::RegionId>,)*
+                    $($variadic_region: Vec<Option<irony::RegionId>>,)*
                 )?
             )?
 
@@ -233,10 +233,10 @@ macro_rules! op_def_one {
                 self.parent = parent;
             }
 
-            fn get_regions(&self) -> Vec<(String, Vec<irony::RegionId>)> {
+            fn get_regions(&self) -> Vec<(String, Vec<Option<irony::RegionId>>)> {
                 vec![
                     $(
-                        $((format!("{}", stringify!($region)), vec![self.$region.unwrap()]),)*
+                        $((format!("{}", stringify!($region)), vec![self.$region]),)*
                         $(
                             $((format!("{}", stringify!($variadic_region)), self.$variadic_region.to_owned()),)*
                         )?
@@ -245,7 +245,7 @@ macro_rules! op_def_one {
             }
 
             fn use_region(&self, region: irony::RegionId) -> bool{
-                self.get_regions().iter().any(|(_, v)| v.contains(&region))
+                self.get_regions().iter().any(|(_, v)| v.contains(&Some(region.to_owned())))
             }
 
             fn get_op_name(&self) -> String {
@@ -367,7 +367,7 @@ macro_rules! op_def_one {
                 $($($variadic_use: Vec<Option<irony::EntityId>>,)*)?
                 $($($attr: Option<$attr_inner_ty>,)*)?
                 $($($region: Option<irony::RegionId>,)*)?
-                $($($($variadic_region: Vec<irony::RegionId>,)*)?)?
+                $($($($variadic_region: Vec<Option<irony::RegionId>>,)*)?)?
             ) -> Self {
 
                 Self {
@@ -405,7 +405,7 @@ macro_rules! op_def_one {
                     attrs: Vec<(String, Self::AttributeT)>,
                     uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                     defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                    regions: Vec<(String, Vec<irony::RegionId>)>,
+                    regions: Vec<(String, Vec<Option<irony::RegionId>>)>,
                 ) -> String
                 where
                     E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,
@@ -521,7 +521,7 @@ macro_rules! op_enum {
                 }
             }
 
-            fn get_regions(&self) -> Vec<(String, Vec<irony::RegionId>)> {
+            fn get_regions(&self) -> Vec<(String, Vec<Option<irony::RegionId>>)> {
                 match self {
                     $name::None => panic!(),
                     $($name::$variant(inner) => inner.get_regions()),*
@@ -596,7 +596,7 @@ macro_rules! op_printer {
                     attrs: Vec<(String, Self::AttributeT)>,
                     uses: Vec<(String, Vec<Option<irony::EntityId>>)>,
                     defs: Vec<(String, Vec<Option<irony::EntityId>>)>,
-                    regions: Vec<(String, Vec<irony::RegionId>)>,
+                    regions: Vec<(String, Vec<Option<irony::RegionId>>)>,
                 ) -> String
                 where
                     E: Environ<EntityT = EntityT, AttributeT = Self::AttributeT>,

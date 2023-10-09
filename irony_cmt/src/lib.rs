@@ -224,14 +224,14 @@ irony::op_def! {
           uses: [cond],
           regions: [body],
           print: (
-              |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, regions: Vec<(String, Vec<RegionId>)>| {
+              |env: &E, _, uses: Vec<(String, Vec<Option<EntityId>>)>, _, regions: Vec<(String, Vec<Option<RegionId>>)>| {
                   let cond = env.print_entity(uses[0].1[0].unwrap());
-                  let body = env.print_region(regions[0].1[0]);
+                  let body = env.print_region(regions[0].1[0].expect("must have region"));
                   format!("ILLEGAL.when {} {{\n{}\n}}", cond, body)
               }
           )
         },
-        
+
         TmpSelect: {
             defs: [lhs],
             uses: [default; conds, values],
@@ -252,11 +252,11 @@ irony::op_def! {
                     };
 
                     let candidates = uses[2].1.iter().zip(uses[1].1.iter()).map(|(value, cond)| {
-                        format!("\t{} : {}", 
+                        format!("\t{} : {}",
                           match cond {
                             Some(cond) => env.print_entity(*cond),
                             None => format!("[TBD]"),
-                          }, 
+                          },
                           env.print_entity(value.unwrap()))
                     }).collect::<Vec<_>>().join(", \n");
 
@@ -303,7 +303,7 @@ irony::op_def! {
           )
         },
 
-        
+
         // ______ END: define the operations in `sv` dialect ______
 
         // ------ BEGIN: define the operations in `hw` dialect -------
@@ -325,11 +325,16 @@ irony::op_def! {
         HwModule: {
             defs: [],
             uses: [],
-            attrs: [name: StringAttr(StringAttr), top: BoolAttr(BoolAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
+            attrs: [name: StringAttr(StringAttr), is_extern: BoolAttr(BoolAttr)(*), top: BoolAttr(BoolAttr), arg_names: ArrayAttr(ArrayAttr), arg_types: ArrayAttr(ArrayAttr)(*), output_names: ArrayAttr(ArrayAttr), output_types: ArrayAttr(ArrayAttr)(*)],
             regions: [body],
             constraints: [ModuleConstraint::default().into()],
             print: (
-                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, Vec<RegionId>)>| {
+                |env: &E, attrs: Vec<(String, AttributeEnum)>, _ , _, regions: Vec<(String, Vec<Option<RegionId>>)>| {
+
+                    let AttributeEnum::BoolAttr(BoolAttr(is_extern)) = irony::utils::extract_vec(&attrs, "is_extern").unwrap() else {
+                      panic!("")
+                    };
+
                     let AttributeEnum::ArrayAttr(arg_names) = irony::utils::extract_vec(&attrs, "arg_names").unwrap() else { panic!("")};
                     let AttributeEnum::ArrayAttr(arg_types) = irony::utils::extract_vec(&attrs, "arg_types").unwrap() else { panic!("")};
 
@@ -344,7 +349,12 @@ irony::op_def! {
                     let outputs = output_names.0.iter().zip(output_types.0.iter()).map(|(name, ty)| {
                         format!("{}: {}", name, ty)
                     }).collect::<Vec<_>>().join(", ");
-                    format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1[0]))
+
+                    if is_extern {
+                      format!("hw.module.extern @{}({}) -> ({}) {{}}", name, args, outputs)
+                    } else {
+                      format!("hw.module @{}({}) -> ({}) {{\n{}\n}}", name, args, outputs, env.print_region(regions[0].1[0].expect("must have region")))
+                    }
                 }
             )
         },

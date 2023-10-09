@@ -30,7 +30,7 @@ impl PassTrait<(), ()> for ReorderPass {
 
   fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    let region = env.get_op(op).get_regions()[0].1[0];
+    let region = env.get_op(op).get_regions()[0].1[0].expect("must have region");
 
     let included = env.get_region(region).op_children.to_owned();
     let mut head = Vec::new();
@@ -87,7 +87,7 @@ impl PassTrait<(), ()> for RemoveEventPass {
       HashMap::new();
     let mut wire_guarded_table = HashMap::new();
     let mut wire_to_be_selected_table = HashMap::new();
-    let region = env.get_op(op).get_regions()[0].1[0];
+    let region = env.get_op(op).get_regions()[0].1[0].expect("must have region");
     let included = env.get_region(region).op_children.to_owned();
     let mut new_included = Vec::new();
 
@@ -258,7 +258,7 @@ impl PassTrait<(), ()> for RemoveSelectPass {
 
   fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    let region = env.get_op(op).get_regions()[0].1[0];
+    let region = env.get_op(op).get_regions()[0].1[0].expect("must have region");
     let included = env.get_region(region).op_children.to_owned();
     let mut included_entity = env.get_region(region).entity_children.to_owned();
     let mut new_included_op = Vec::new();
@@ -451,7 +451,7 @@ impl PassTrait<(), ()> for RemoveUnaryPass {
 
   fn run_raw<E>(&self, env: &mut E, op: OpId) -> Result<(), ()>
   where E: Environ<EntityT = Self::EntityT, OpT = Self::OpT> {
-    let region = env.get_op(op).get_regions()[0].1[0];
+    let region = env.get_op(op).get_regions()[0].1[0].expect("must have region");
     let included = env.get_region(region).op_children.to_owned();
     let mut new_included_op = Vec::new();
     let mut included_entity = env.get_region(region).entity_children.to_owned();

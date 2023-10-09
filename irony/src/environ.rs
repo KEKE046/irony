@@ -139,12 +139,17 @@ pub trait Environ: Sized {
   fn delete_op(&mut self, op_id: OpId) -> ();
   fn delete_op_and_all(&mut self, op_id: OpId) -> ();
 
-  fn delete_region(&mut self, region_id: RegionId) -> () {
-    for op in self.get_region(region_id).get_op_children() {
-      self.delete_op_and_all(op);
-    }
-    for entity in self.get_region(region_id).get_entity_children() {
-      self.delete_entity(entity);
+  fn delete_region(&mut self, region_id: Option<RegionId>) -> () {
+    match region_id {
+      Some(region_id) => {
+        for op in self.get_region(region_id).get_op_children() {
+          self.delete_op_and_all(op);
+        }
+        for entity in self.get_region(region_id).get_entity_children() {
+          self.delete_entity(entity);
+        }
+      },
+      None => {},
     }
   }
 

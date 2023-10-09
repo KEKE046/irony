@@ -102,8 +102,8 @@ pub fn extract_types<E, EntityT>(
   env: &E, entities: Vec<Option<irony::EntityId>>,
 ) -> Option<AttributeEnum>
 where
-  E: irony::Environ<EntityT = EntityT>,
-  EntityT: Entity<DataTypeT = DataTypeEnum>,
+  E: irony::Environ<EntityT = EntityT, AttributeT = AttributeEnum>,
+  EntityT: Entity<DataTypeT = DataTypeEnum, AttributeT = AttributeEnum>,
 {
   Some(
     ArrayAttr(

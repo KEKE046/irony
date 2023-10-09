@@ -14,6 +14,7 @@ mod hw_test {
       HwModule::new(
         Some(StringAttr("pass".into())),
         Some(BoolAttr(false)),
+        Some(BoolAttr(false)),
         Some(vec![StringAttr("a".into())].into()),
         Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
         Some(vec![StringAttr("b".into())].into()),
@@ -44,6 +45,7 @@ mod hw_test {
     let module_def = cmt.add_op(
       HwModule::new(
         Some(StringAttr("top".into())),
+        Some(false.into()),
         Some(true.into()),
         Some(vec![StringAttr("a".into())].into()),
         Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
@@ -200,6 +202,7 @@ mod hw_test {
     let module_def = circt.add_op(
       HwModule::new(
         Some(StringAttr("top".into())),
+        Some(false.into()),
         Some(true.into()),
         Some(vec![StringAttr("a".into()), StringAttr("b".into())].into()),
         Some(
@@ -252,6 +255,7 @@ mod hw_test {
       HwModule::new(
         Some(StringAttr("pass".into())),
         Some(false.into()),
+        Some(false.into()),
         Some(vec![StringAttr("a".into())].into()),
         Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
         Some(vec![StringAttr("b".into())].into()),
@@ -282,6 +286,7 @@ mod hw_test {
     circt.add_op(
       HwModule::new(
         Some(StringAttr("top".into())),
+        Some(false.into()),
         Some(true.into()),
         Some(vec![StringAttr("a".into())].into()),
         Some(vec![TypeAttr(DataTypeEnum::UInt(8.into()))].into()),
