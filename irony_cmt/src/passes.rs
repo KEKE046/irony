@@ -125,7 +125,13 @@ impl PassTrait<(), ()> for RemoveEventPass {
           !defs.is_empty()
         })
         .collect();
-      assert!(source_signals.len() == 1, "event must have only one source signal");
+      assert!(
+        source_signals.len() != 0,
+        "{:?}({:?}) doesn't have source signals, which control synthesis should provide",
+        event,
+        env.get_entity(event).get_attr("name").unwrap()
+      );
+      assert!(source_signals.len() == 1, "event must have at most one source signal");
       let source_signal = source_signals[0].to_owned();
       let event_uses = env.get_uses(event.to_owned());
       for event_use in event_uses {
@@ -183,7 +189,7 @@ impl PassTrait<(), ()> for RemoveEventPass {
               panic!("defs in when body must be only used in select")
             }
           }
-          
+
           env.delete_op(op_id.to_owned());
         },
         _ => {
@@ -605,7 +611,7 @@ impl PassTrait<(), ()> for RemoveUnaryPass {
       region.op_children = new_included_op;
       region.entity_children = included_entity;
     });
-    
+
     Ok(())
   }
 }
